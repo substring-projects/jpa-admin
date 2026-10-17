@@ -2,17 +2,5 @@ jdk:
   - openjdk17
 
 install:
-  - |
-    set -eu
-
-    # The UI Maven module invokes npm to build the bundled frontend.
-    curl -fsSLo /tmp/jpa-admin-node.tar.xz https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz
-    mkdir -p /tmp/jpa-admin-node
-    tar -xJf /tmp/jpa-admin-node.tar.xz -C /tmp/jpa-admin-node --strip-components=1
-    export PATH="/tmp/jpa-admin-node/bin:$PATH"
-
-    npm --prefix jpa-admin-ui ci
-    npm --prefix jpa-admin-ui test
-
-    # Install the starter and its dependencies, excluding the sample app.
-    mvn -B -ntp clean install -pl jpa-admin-spring-boot-starter -am
+  # The frontend is pre-built in jpa-admin-ui/dist, so no Node.js/GLIBC is needed during remote JitPack build.
+  - mvn -B -ntp clean install -pl jpa-admin-spring-boot-starter -am -DskipNpmBuild=true -DskipTests

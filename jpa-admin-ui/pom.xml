@@ -15,6 +15,10 @@
     <name>JPA Admin UI</name>
     <description>Bundled static React SPA assets for JPA Admin Console</description>
 
+    <properties>
+        <skipNpmBuild>false</skipNpmBuild>
+    </properties>
+
     <build>
         <plugins>
             <!-- Automatically compile React SPA frontend during Maven build -->
@@ -30,6 +34,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
+                            <skip>${skipNpmBuild}</skip>
                             <executable>npm</executable>
                             <arguments>
                                 <argument>run</argument>

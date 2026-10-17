@@ -3,6 +3,8 @@ target/
 node_modules/
 **/node_modules/
 dist/
+!jpa-admin-ui/dist/
+!jpa-admin-ui/dist/**
 .DS_Store
 *.log
 .idea/
