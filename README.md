@@ -1,5 +1,7 @@
 # Spring Boot JPA Admin
 
+[![JitPack](https://jitpack.io/v/substring-projects/jpa-admin.svg)](https://jitpack.io/#substring-projects/jpa-admin)
+
 A Spring Boot starter that discovers JPA entities and provides an administration UI for browsing records, editing scalar fields and single-value relationships, and running custom actions. The React frontend is packaged inside a JAR and served by the Spring application at `/admin/`.
 
 The project is currently **`1.0.0-SNAPSHOT`**. This README describes the implementation in this repository. [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md) describes the broader product roadmap, including features that are not implemented yet.
@@ -101,17 +103,71 @@ The sample seeds categories, products, customers, orders, and order items. Its H
 
 ## Use the starter in another application
 
-First install this snapshot into your local Maven repository:
+### Option 1: Via JitPack (Recommended)
 
-```bash
-npm ci --prefix jpa-admin-ui
-mvn clean install
+You can consume releases directly without building the starter locally.
+
+#### Maven (`pom.xml`)
+
+1. Add the JitPack repository inside your `<repositories>` block:
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
 ```
 
-The repository does not establish a published Maven Central release. The examples below assume a local installation or a repository where you have published these artifacts.
+2. Add the starter dependency:
+```xml
+<dependency>
+    <groupId>com.github.substring-projects</groupId>
+    <artifactId>jpa-admin-spring-boot-starter</artifactId>
+    <version>v1.0.0</version>
+</dependency>
+```
 
-### Maven
+#### Gradle (Groovy - `build.gradle`)
 
+```groovy
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.0'
+}
+```
+
+#### Gradle (Kotlin DSL - `build.gradle.kts`)
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    implementation("com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.0")
+}
+```
+
+---
+
+### Option 2: Via Local Installation (`~/.m2`)
+
+If you are developing locally or customizing the library:
+
+1. Build and install into your local Maven cache:
+```bash
+./mvnw clean install -DskipTests
+```
+
+2. In your consuming project:
+
+**Maven:**
 ```xml
 <dependency>
     <groupId>io.github.substring-projects</groupId>
@@ -120,10 +176,7 @@ The repository does not establish a published Maven Central release. The example
 </dependency>
 ```
 
-### Gradle
-
-For a locally installed snapshot:
-
+**Gradle:**
 ```groovy
 repositories {
     mavenLocal()
