@@ -133,17 +133,31 @@ public class JpaMetamodelScanner {
         } else {
             meta.setLabel(humanize(attr.getName()));
             meta.setOrder(100);
-            String lower = attr.getName().toLowerCase();
-            if (lower.equals("createdat") || lower.equals("createddate") || lower.equals("createdon")) {
-                meta.setReadOnly(true);
-                meta.setInForm(false);
-            }
         }
 
-        if (field != null && field.isAnnotationPresent(Column.class)) {
-            Column col = field.getAnnotation(Column.class);
-            if (!col.updatable()) {
-                meta.setReadOnly(true);
+        // Auto-detect read-only creation fields & non-updatable columns
+        String lowerName = attr.getName().toLowerCase().replace("_", "").replace("-", "");
+        if (lowerName.equals("createdat") || lowerName.equals("createddate")
+                || lowerName.equals("createdon") || lowerName.equals("creationdate")
+                || lowerName.equals("createtime") || lowerName.equals("creationtime")
+                || lowerName.equals("createddatetime")) {
+            meta.setReadOnly(true);
+            meta.setInForm(false);
+        }
+
+        if (field != null) {
+            for (java.lang.annotation.Annotation ann : field.getAnnotations()) {
+                String annName = ann.annotationType().getSimpleName();
+                if ("CreatedDate".equals(annName) || "CreationTimestamp".equals(annName)) {
+                    meta.setReadOnly(true);
+                    meta.setInForm(false);
+                }
+            }
+            if (field.isAnnotationPresent(Column.class)) {
+                Column col = field.getAnnotation(Column.class);
+                if (!col.updatable()) {
+                    meta.setReadOnly(true);
+                }
             }
         }
 

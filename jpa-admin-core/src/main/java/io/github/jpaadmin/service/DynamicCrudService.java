@@ -181,17 +181,35 @@ public class DynamicCrudService {
         String pkField = metadata.getPrimaryKeyField();
         String displayProp = null;
 
-        // Find primary display property
-        for (FieldMetadata f : metadata.getFields()) {
-            if (!f.isPrimaryKey() && f.getFieldType() == FieldType.STRING && !f.isSensitive()) {
-                displayProp = f.getName();
+        // Find primary display property for DB filtering
+        for (String candidate : new String[]{"name", "title", "label", "fullName", "displayName", "username", "code"}) {
+            if (metadata.getField(candidate) != null) {
+                displayProp = candidate;
                 break;
+            }
+        }
+        if (displayProp == null) {
+            for (FieldMetadata f : metadata.getFields()) {
+                if (!f.isPrimaryKey() && f.getFieldType() == FieldType.STRING && !f.isSensitive()) {
+                    displayProp = f.getName();
+                    break;
+                }
             }
         }
         if (displayProp == null) displayProp = pkField;
 
         if (query != null && !query.trim().isEmpty()) {
-            cq.where(cb.like(cb.lower(root.get(displayProp).as(String.class)), "%" + query.toLowerCase() + "%"));
+            String q = "%" + query.trim().toLowerCase() + "%";
+            List<Predicate> predicates = new ArrayList<>();
+            if (displayProp != null) {
+                predicates.add(cb.like(cb.lower(root.get(displayProp).as(String.class)), q));
+            }
+            if (pkField != null && !pkField.equals(displayProp)) {
+                predicates.add(cb.like(cb.lower(root.get(pkField).as(String.class)), q));
+            }
+            if (!predicates.isEmpty()) {
+                cq.where(cb.or(predicates.toArray(new Predicate[0])));
+            }
         }
 
         var typedQuery = entityManager.createQuery(cq);
@@ -202,9 +220,9 @@ public class DynamicCrudService {
         for (Object item : results) {
             Map<String, Object> map = new HashMap<>();
             Object idVal = getFieldValue(item, pkField);
-            Object labelVal = getFieldValue(item, displayProp);
+            String label = resolveEntityLabel(item, metadata, null);
             map.put("id", idVal);
-            map.put("label", (labelVal != null) ? labelVal.toString() : ("#" + idVal));
+            map.put("label", (label != null && !label.isEmpty()) ? label : String.valueOf(idVal));
             list.add(map);
         }
         return list;
@@ -383,17 +401,8 @@ public class DynamicCrudService {
                     Object relId = getFieldValue(val, relPk);
                     relMap.put("id", relId);
 
-                    String lookupProp = fieldMeta.getLookupProperty();
-                    Object labelVal = (lookupProp != null && !lookupProp.isEmpty()) ? getFieldValue(val, lookupProp) : null;
-                    if (labelVal == null && relMeta != null) {
-                        for (FieldMetadata rf : relMeta.getFields()) {
-                            if (!rf.isPrimaryKey() && rf.getFieldType() == FieldType.STRING && !rf.isSensitive()) {
-                                labelVal = getFieldValue(val, rf.getName());
-                                break;
-                            }
-                        }
-                    }
-                    relMap.put("label", (labelVal != null) ? labelVal.toString() : ("#" + relId));
+                    String label = resolveEntityLabel(val, relMeta, fieldMeta.getLookupProperty());
+                    relMap.put("label", (label != null && !label.isEmpty()) ? label : String.valueOf(relId));
                     map.put(prop, relMap);
                 } else {
                     map.put(prop, null);
@@ -424,13 +433,25 @@ public class DynamicCrudService {
         return map;
     }
 
+    private boolean isCreationTimestampField(String fieldName) {
+        if (fieldName == null) return false;
+        String normalized = fieldName.toLowerCase().replace("_", "").replace("-", "");
+        return normalized.equals("createdat")
+                || normalized.equals("createddate")
+                || normalized.equals("createdon")
+                || normalized.equals("creationdate")
+                || normalized.equals("creationtime")
+                || normalized.equals("createtime")
+                || normalized.equals("createddatetime");
+    }
+
     private void bindPayload(Object entity, Map<String, Object> payload, EntityMetadata metadata, boolean isUpdate) {
         for (FieldMetadata fieldMeta : metadata.getFields()) {
             String prop = fieldMeta.getName();
             if (fieldMeta.isPrimaryKey() && fieldMeta.isGeneratedValue()) continue;
             if (fieldMeta.isComputed() || !payload.containsKey(prop)) continue;
-            // On update, skip read-only and non-updatable fields (like createdAt)
-            if (isUpdate && fieldMeta.isReadOnly()) continue;
+            // On update, skip read-only and creation timestamp fields (like createdAt)
+            if (isUpdate && (fieldMeta.isReadOnly() || isCreationTimestampField(prop))) continue;
 
             Object rawVal = payload.get(prop);
 
@@ -550,29 +571,50 @@ public class DynamicCrudService {
         if (obj == null || fieldName == null) return;
         try {
             Field f = findDeclaredField(obj.getClass(), fieldName);
-            Class<?> targetType = (f != null) ? f.getType() : null;
-
-            Object finalVal = (targetType != null) ? convertValueToTargetType(value, targetType) : value;
-
-            // 1. Try invoking setter method: e.g. setStatus(ProductStatus status)
             String setterName = "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
-            if (targetType != null) {
+
+            // 1. Try finding any setter with 1 parameter matching setterName
+            Method setter = null;
+            if (f != null) {
                 try {
-                    Method setter = obj.getClass().getMethod(setterName, targetType);
-                    setter.invoke(obj, finalVal);
-                    return;
-                } catch (NoSuchMethodException ignored) {
-                } catch (IllegalArgumentException iae) {
-                    // Fall back to direct field reflection if setter parameter type mismatch
+                    setter = obj.getClass().getMethod(setterName, f.getType());
+                } catch (NoSuchMethodException ignored) {}
+            }
+            if (setter == null) {
+                for (Method m : obj.getClass().getMethods()) {
+                    if (m.getName().equalsIgnoreCase(setterName) && m.getParameterCount() == 1) {
+                        setter = m;
+                        break;
+                    }
                 }
             }
 
-            // 2. Fallback to direct field reflection
+            if (setter != null) {
+                try {
+                    Class<?> paramType = setter.getParameterTypes()[0];
+                    Object finalVal = convertValueToTargetType(value, paramType);
+                    setter.setAccessible(true);
+                    setter.invoke(obj, finalVal);
+                    return;
+                } catch (Exception ignored) {
+                    // Fall back to direct field reflection if setter invocation fails
+                }
+            }
+
+            // 2. Direct field reflection fallback
             if (f != null) {
-                f.setAccessible(true);
-                f.set(obj, finalVal);
+                try {
+                    f.setAccessible(true);
+                    Object finalVal = convertValueToTargetType(value, f.getType());
+                    f.set(obj, finalVal);
+                    return;
+                } catch (Exception ignored) {}
             }
         } catch (Exception e) {
+            // If creation timestamp field, do not fail
+            if (isCreationTimestampField(fieldName)) {
+                return;
+            }
             throw new RuntimeException("Failed to set field " + fieldName + ": " + e.getMessage(), e);
         }
     }
@@ -606,6 +648,16 @@ public class DynamicCrudService {
         if (Number.class.isAssignableFrom(unwrappedType)) {
             if (unwrappedType == Long.class) {
                 if (value instanceof Number n) return n.longValue();
+                if (value instanceof java.util.Date d) return d.getTime();
+                if (value instanceof Instant inst) return inst.toEpochMilli();
+                if (value instanceof LocalDateTime ldt) return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                if (value instanceof LocalDate ld) return ld.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                if (str.contains("T") || str.contains("-")) {
+                    try {
+                        Object dt = convertToDateTime(value, Instant.class);
+                        if (dt instanceof Instant inst) return inst.toEpochMilli();
+                    } catch (Exception ignored) {}
+                }
                 return Long.parseLong(str.replaceAll("[^0-9.-]", ""));
             }
             if (unwrappedType == Integer.class) {
@@ -794,6 +846,74 @@ public class DynamicCrudService {
             throw new NoSuchElementException("Entity " + entityName + " not found or not registered with JPA Admin");
         }
         return meta;
+    }
+
+    private String resolveEntityLabel(Object entity, EntityMetadata metadata, String lookupProp) {
+        if (entity == null) return "";
+
+        // 1. Explicit lookup property if configured
+        if (lookupProp != null && !lookupProp.trim().isEmpty()) {
+            Object val = getFieldValue(entity, lookupProp.trim());
+            if (val != null) {
+                String str = val.toString().trim();
+                if (!str.isEmpty()) return str;
+            }
+        }
+
+        // 2. Prioritize entity's own toString() if overridden
+        try {
+            Method toStringMethod = entity.getClass().getMethod("toString");
+            if (toStringMethod.getDeclaringClass() != Object.class) {
+                String str = entity.toString();
+                if (str != null && !str.trim().isEmpty() && !isDefaultToString(entity, str.trim())) {
+                    return str.trim();
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. Common naming properties
+        String[] candidateProps = {"name", "title", "label", "fullName", "displayName", "username", "email", "code", "description"};
+        for (String prop : candidateProps) {
+            Object val = getFieldValue(entity, prop);
+            if (val != null) {
+                String str = val.toString().trim();
+                if (!str.isEmpty()) return str;
+            }
+        }
+
+        // 4. Any non-primary key, non-sensitive string field from metadata
+        if (metadata != null) {
+            for (FieldMetadata f : metadata.getFields()) {
+                if (!f.isPrimaryKey() && f.getFieldType() == FieldType.STRING && !f.isSensitive()) {
+                    Object val = getFieldValue(entity, f.getName());
+                    if (val != null) {
+                        String str = val.toString().trim();
+                        if (!str.isEmpty()) return str;
+                    }
+                }
+            }
+        }
+
+        // 5. Fallback to Primary Key
+        String pkField = (metadata != null) ? metadata.getPrimaryKeyField() : "id";
+        Object idVal = getFieldValue(entity, pkField);
+        return (idVal != null) ? String.valueOf(idVal) : "";
+    }
+
+    private boolean isDefaultToString(Object obj, String str) {
+        if (str == null || str.isEmpty()) return true;
+        String fullClassName = obj.getClass().getName();
+        String simpleClassName = obj.getClass().getSimpleName();
+        if (str.startsWith(fullClassName + "@") || str.startsWith(simpleClassName + "@")) {
+            return true;
+        }
+        Class<?> superclass = obj.getClass().getSuperclass();
+        if (superclass != null && superclass != Object.class) {
+            if (str.startsWith(superclass.getName() + "@") || str.startsWith(superclass.getSimpleName() + "@")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Class<?> loadClass(String className) {

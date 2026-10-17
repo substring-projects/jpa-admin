@@ -1,25 +1,42 @@
 package com.example.demo.domain;
 
-import io.github.jpaadmin.annotations.*;
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
+
+import io.github.jpaadmin.annotations.ActionScope;
+import io.github.jpaadmin.annotations.AdminAction;
+import io.github.jpaadmin.annotations.AdminBadge;
+import io.github.jpaadmin.annotations.AdminComputed;
+import io.github.jpaadmin.annotations.AdminField;
+import io.github.jpaadmin.annotations.AdminLookup;
+import io.github.jpaadmin.annotations.AdminResource;
+import io.github.jpaadmin.annotations.AdminWidget;
+import io.github.jpaadmin.annotations.BadgeColor;
+import io.github.jpaadmin.annotations.BadgeMap;
+import io.github.jpaadmin.annotations.SortDir;
+import io.github.jpaadmin.annotations.WidgetType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "products")
-@AdminResource(
-    displayName = "Product",
-    pluralName = "Products",
-    group = "Catalog",
-    icon = "package",
-    defaultSortBy = "id",
-    defaultSortDir = SortDir.DESC
-)
+@AdminResource(displayName = "Product", pluralName = "Products", group = "Catalog", icon = "package", defaultSortBy = "id", defaultSortDir = SortDir.DESC)
 public class Product {
 
     @Id
@@ -52,10 +69,10 @@ public class Product {
     @Column(nullable = false)
     @AdminField(label = "Status", order = 6, filterable = true)
     @AdminBadge(mapping = {
-        @BadgeMap(value = "DRAFT", color = BadgeColor.GRAY, label = "Draft"),
-        @BadgeMap(value = "PUBLISHED", color = BadgeColor.GREEN, label = "Published"),
-        @BadgeMap(value = "OUT_OF_STOCK", color = BadgeColor.RED, label = "Out of Stock"),
-        @BadgeMap(value = "ARCHIVED", color = BadgeColor.YELLOW, label = "Archived")
+            @BadgeMap(value = "DRAFT", color = BadgeColor.GRAY, label = "Draft"),
+            @BadgeMap(value = "PUBLISHED", color = BadgeColor.GREEN, label = "Published"),
+            @BadgeMap(value = "OUT_OF_STOCK", color = BadgeColor.RED, label = "Out of Stock"),
+            @BadgeMap(value = "ARCHIVED", color = BadgeColor.YELLOW, label = "Archived")
     })
     private ProductStatus status = ProductStatus.DRAFT;
 
@@ -69,9 +86,15 @@ public class Product {
     @AdminField(label = "Created At", order = 8, readOnly = true, inForm = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    public Product() {}
+    @Column(insertable = false)
+    @AdminField(label = "Created At (Instant)", order = 9, readOnly = true, inForm = false)
+    private Instant createdAtInstant = Instant.now();
 
-    public Product(String name, String description, BigDecimal price, Integer stockQuantity, ProductStatus status, Category category) {
+    public Product() {
+    }
+
+    public Product(String name, String description, BigDecimal price, Integer stockQuantity, ProductStatus status,
+            Category category) {
         this.name = name;
         this.description = description;
         this.price = price;
@@ -79,6 +102,7 @@ public class Product {
         this.status = status;
         this.category = category;
         this.createdAt = LocalDateTime.now();
+        this.createdAtInstant = Instant.now();
     }
 
     @Transient
@@ -92,27 +116,75 @@ public class Product {
         this.status = ProductStatus.PUBLISHED;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getName() {
+        return name;
+    }
 
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public Integer getStockQuantity() { return stockQuantity; }
-    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+    public String getDescription() {
+        return description;
+    }
 
-    public ProductStatus getStatus() { return status; }
-    public void setStatus(ProductStatus status) { this.status = status; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public Category getCategory() { return category; }
-    public void setCategory(Category category) { this.category = category; }
+    public BigDecimal getPrice() {
+        return price;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public Integer getStockQuantity() {
+        return stockQuantity;
+    }
+
+    public void setStockQuantity(Integer stockQuantity) {
+        this.stockQuantity = stockQuantity;
+    }
+
+    public ProductStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ProductStatus status) {
+        this.status = status;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getCreatedAtInstant() {
+        return createdAtInstant;
+    }
+
+    public void setCreatedAtInstant(Instant createdAtInstant) {
+        this.createdAtInstant = createdAtInstant;
+    }
 }

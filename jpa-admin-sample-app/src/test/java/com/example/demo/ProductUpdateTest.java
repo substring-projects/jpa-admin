@@ -37,4 +37,28 @@ class ProductUpdateTest {
         // createdAt should remain original because it's read-only
         assertEquals(originalCreatedAt, updated.get("createdAt"));
     }
+
+    @Test
+    void testLookupUsesToString() {
+        var results = crudService.lookup("Category", null, 10);
+        assertNotNull(results);
+        assertFalse(results.isEmpty());
+        Map<String, Object> first = results.get(0);
+        assertNotNull(first.get("id"));
+        assertNotNull(first.get("label"));
+        // Should not be raw "#1" because Category has toString()
+        assertNotEquals("#" + first.get("id"), first.get("label"));
+        assertEquals("Electronics", first.get("label"));
+    }
+
+    @Test
+    void testForeignKeySerializationUsesToString() {
+        Map<String, Object> product = crudService.getRecord("Product", 1L);
+        assertNotNull(product);
+        Object catObj = product.get("category");
+        assertNotNull(catObj);
+        assertTrue(catObj instanceof Map<?, ?>);
+        Map<?, ?> catMap = (Map<?, ?>) catObj;
+        assertEquals("Electronics", catMap.get("label"));
+    }
 }
