@@ -19,8 +19,9 @@ public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer {
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         String path = properties.getPath();
-        registry.addRedirectViewController("/", path + "/");
-        registry.addRedirectViewController(path, path + "/");
+        if (path != null && !path.isEmpty() && !"/".equals(path)) {
+            registry.addRedirectViewController(path, path + "/");
+        }
         registry.addViewController(path + "/").setViewName("forward:" + path + "/index.html");
     }
 
