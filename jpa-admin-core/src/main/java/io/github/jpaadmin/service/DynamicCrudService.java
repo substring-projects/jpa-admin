@@ -20,9 +20,16 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
 import java.util.*;
 
 @Service
@@ -103,7 +110,7 @@ public class DynamicCrudService {
         Class<?> entityClass = loadClass(metadata.getJavaClassName());
         try {
             Object entity = entityClass.getDeclaredConstructor().newInstance();
-            bindPayload(entity, payload, metadata);
+            bindPayload(entity, payload, metadata, false);
             entityManager.persist(entity);
             entityManager.flush();
             return serializeEntity(entity, metadata, true);
@@ -126,7 +133,7 @@ public class DynamicCrudService {
             throw new NoSuchElementException(metadata.getDisplayName() + " with ID " + id + " not found");
         }
 
-        bindPayload(entity, payload, metadata);
+        bindPayload(entity, payload, metadata, true);
         entityManager.merge(entity);
         entityManager.flush();
         return serializeEntity(entity, metadata, true);
@@ -417,11 +424,13 @@ public class DynamicCrudService {
         return map;
     }
 
-    private void bindPayload(Object entity, Map<String, Object> payload, EntityMetadata metadata) {
+    private void bindPayload(Object entity, Map<String, Object> payload, EntityMetadata metadata, boolean isUpdate) {
         for (FieldMetadata fieldMeta : metadata.getFields()) {
             String prop = fieldMeta.getName();
             if (fieldMeta.isPrimaryKey() && fieldMeta.isGeneratedValue()) continue;
             if (fieldMeta.isComputed() || !payload.containsKey(prop)) continue;
+            // On update, skip read-only and non-updatable fields (like createdAt)
+            if (isUpdate && fieldMeta.isReadOnly()) continue;
 
             Object rawVal = payload.get(prop);
 
@@ -459,8 +468,8 @@ public class DynamicCrudService {
         return switch (fieldMeta.getFieldType()) {
             case NUMBER -> {
                 String jType = fieldMeta.getJavaType();
-                if ("Long".equalsIgnoreCase(jType) || "long".equalsIgnoreCase(jType)) yield Long.parseLong(str);
-                if ("Integer".equalsIgnoreCase(jType) || "int".equalsIgnoreCase(jType)) yield Integer.parseInt(str);
+                if ("Long".equalsIgnoreCase(jType) || "long".equalsIgnoreCase(jType)) yield Long.parseLong(str.replaceAll("[^0-9.-]", ""));
+                if ("Integer".equalsIgnoreCase(jType) || "int".equalsIgnoreCase(jType)) yield Integer.parseInt(str.replaceAll("[^0-9.-]", ""));
                 if ("BigDecimal".equalsIgnoreCase(jType)) yield new BigDecimal(str);
                 if ("Double".equalsIgnoreCase(jType) || "double".equalsIgnoreCase(jType)) yield Double.parseDouble(str);
                 if ("Float".equalsIgnoreCase(jType) || "float".equalsIgnoreCase(jType)) yield Float.parseFloat(str);
@@ -468,8 +477,17 @@ public class DynamicCrudService {
                 yield Double.parseDouble(str);
             }
             case BOOLEAN -> Boolean.parseBoolean(str);
-            case DATE -> LocalDate.parse(str);
-            case DATE_TIME -> LocalDateTime.parse(str.replace("Z", "").replace(" ", "T"), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            case DATE -> {
+                if (str.length() >= 10 && str.charAt(4) == '-' && str.charAt(7) == '-') {
+                    yield LocalDate.parse(str.substring(0, 10));
+                }
+                yield LocalDate.parse(str);
+            }
+            case DATE_TIME -> {
+                Field f = (entityClass != null) ? findDeclaredField(entityClass, fieldMeta.getName()) : null;
+                Class<?> fType = (f != null) ? f.getType() : LocalDateTime.class;
+                yield convertToDateTime(str, fType);
+            }
             case ENUM -> {
                 if (entityClass != null) {
                     Field f = findDeclaredField(entityClass, fieldMeta.getName());
@@ -534,12 +552,7 @@ public class DynamicCrudService {
             Field f = findDeclaredField(obj.getClass(), fieldName);
             Class<?> targetType = (f != null) ? f.getType() : null;
 
-            Object finalVal = value;
-            if (targetType != null && targetType.isEnum() && value != null) {
-                if (!targetType.isInstance(value)) {
-                    finalVal = Enum.valueOf((Class<Enum>) targetType, value.toString().trim());
-                }
-            }
+            Object finalVal = (targetType != null) ? convertValueToTargetType(value, targetType) : value;
 
             // 1. Try invoking setter method: e.g. setStatus(ProductStatus status)
             String setterName = "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
@@ -548,7 +561,10 @@ public class DynamicCrudService {
                     Method setter = obj.getClass().getMethod(setterName, targetType);
                     setter.invoke(obj, finalVal);
                     return;
-                } catch (NoSuchMethodException ignored) {}
+                } catch (NoSuchMethodException ignored) {
+                } catch (IllegalArgumentException iae) {
+                    // Fall back to direct field reflection if setter parameter type mismatch
+                }
             }
 
             // 2. Fallback to direct field reflection
@@ -559,6 +575,205 @@ public class DynamicCrudService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to set field " + fieldName + ": " + e.getMessage(), e);
         }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Object convertValueToTargetType(Object value, Class<?> targetType) {
+        if (value == null || targetType == null) {
+            return null;
+        }
+        if (targetType.isInstance(value)) {
+            return value;
+        }
+
+        Class<?> unwrappedType = targetType.isPrimitive() ? wrapPrimitive(targetType) : targetType;
+        if (unwrappedType.isInstance(value)) {
+            return value;
+        }
+
+        String str = value.toString().trim();
+        if (unwrappedType == String.class) {
+            return str;
+        }
+        if (str.isEmpty()) {
+            return null;
+        }
+
+        if (unwrappedType.isEnum()) {
+            return Enum.valueOf((Class<Enum>) unwrappedType, str);
+        }
+
+        if (Number.class.isAssignableFrom(unwrappedType)) {
+            if (unwrappedType == Long.class) {
+                if (value instanceof Number n) return n.longValue();
+                return Long.parseLong(str.replaceAll("[^0-9.-]", ""));
+            }
+            if (unwrappedType == Integer.class) {
+                if (value instanceof Number n) return n.intValue();
+                return Integer.parseInt(str.replaceAll("[^0-9.-]", ""));
+            }
+            if (unwrappedType == Double.class) {
+                if (value instanceof Number n) return n.doubleValue();
+                return Double.parseDouble(str);
+            }
+            if (unwrappedType == Float.class) {
+                if (value instanceof Number n) return n.floatValue();
+                return Float.parseFloat(str);
+            }
+            if (unwrappedType == BigDecimal.class) {
+                if (value instanceof BigDecimal bd) return bd;
+                if (value instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+                return new BigDecimal(str);
+            }
+            if (unwrappedType == BigInteger.class) {
+                if (value instanceof BigInteger bi) return bi;
+                return new BigInteger(str);
+            }
+            if (unwrappedType == Short.class) {
+                if (value instanceof Number n) return n.shortValue();
+                return Short.parseShort(str);
+            }
+            if (unwrappedType == Byte.class) {
+                if (value instanceof Number n) return n.byteValue();
+                return Byte.parseByte(str);
+            }
+        }
+
+        if (unwrappedType == Boolean.class) {
+            if (value instanceof Boolean b) return b;
+            return "true".equalsIgnoreCase(str) || "1".equals(str) || "yes".equalsIgnoreCase(str);
+        }
+
+        if (unwrappedType == UUID.class) {
+            return UUID.fromString(str);
+        }
+
+        if (isDateTimeType(unwrappedType)) {
+            return convertToDateTime(value, unwrappedType);
+        }
+
+        return value;
+    }
+
+    private boolean isDateTimeType(Class<?> type) {
+        if (type == null) return false;
+        return Temporal.class.isAssignableFrom(type)
+                || java.util.Date.class.isAssignableFrom(type)
+                || type == java.sql.Date.class
+                || type == java.sql.Timestamp.class;
+    }
+
+    private Class<?> wrapPrimitive(Class<?> type) {
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == double.class) return Double.class;
+        if (type == float.class) return Float.class;
+        if (type == boolean.class) return Boolean.class;
+        if (type == byte.class) return Byte.class;
+        if (type == short.class) return Short.class;
+        if (type == char.class) return Character.class;
+        return type;
+    }
+
+    private Object convertToDateTime(Object value, Class<?> targetType) {
+        if (value == null) return null;
+        if (targetType.isInstance(value)) return value;
+
+        LocalDateTime ldt = null;
+        Instant instant = null;
+        LocalDate ld = null;
+
+        if (value instanceof LocalDateTime v) {
+            ldt = v;
+            instant = v.atZone(ZoneId.systemDefault()).toInstant();
+            ld = v.toLocalDate();
+        } else if (value instanceof LocalDate v) {
+            ld = v;
+            ldt = v.atStartOfDay();
+            instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+        } else if (value instanceof Instant v) {
+            instant = v;
+            ldt = LocalDateTime.ofInstant(v, ZoneId.systemDefault());
+            ld = ldt.toLocalDate();
+        } else if (value instanceof java.util.Date v) {
+            instant = v.toInstant();
+            ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+            ld = ldt.toLocalDate();
+        } else if (value instanceof Number num) {
+            instant = Instant.ofEpochMilli(num.longValue());
+            ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+            ld = ldt.toLocalDate();
+        } else {
+            String str = value.toString().trim();
+            if (str.isEmpty()) return null;
+
+            try {
+                if (str.endsWith("Z")) {
+                    instant = Instant.parse(str);
+                    ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+                    ld = ldt.toLocalDate();
+                } else if (str.contains("+") || (str.lastIndexOf('-') > 10)) {
+                    OffsetDateTime odt = OffsetDateTime.parse(str);
+                    instant = odt.toInstant();
+                    ldt = odt.toLocalDateTime();
+                    ld = ldt.toLocalDate();
+                } else if (str.contains("T")) {
+                    ldt = LocalDateTime.parse(str, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+                    ld = ldt.toLocalDate();
+                } else if (str.contains(" ") && str.length() > 10) {
+                    ldt = LocalDateTime.parse(str.replace(" ", "T"), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+                    ld = ldt.toLocalDate();
+                } else if (str.length() == 10 && str.charAt(4) == '-' && str.charAt(7) == '-') {
+                    ld = LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE);
+                    ldt = ld.atStartOfDay();
+                    instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+                } else {
+                    try {
+                        ldt = LocalDateTime.parse(str);
+                        instant = ldt.atZone(ZoneId.systemDefault()).toInstant();
+                        ld = ldt.toLocalDate();
+                    } catch (Exception e1) {
+                        instant = Instant.parse(str);
+                        ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+                        ld = ldt.toLocalDate();
+                    }
+                }
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Cannot parse date/time string '" + str + "': " + e.getMessage(), e);
+            }
+        }
+
+        if (targetType == LocalDateTime.class) {
+            return ldt;
+        }
+        if (targetType == LocalDate.class) {
+            return ld;
+        }
+        if (targetType == LocalTime.class) {
+            return ldt != null ? ldt.toLocalTime() : null;
+        }
+        if (targetType == Instant.class) {
+            return instant;
+        }
+        if (targetType == OffsetDateTime.class) {
+            return instant != null ? instant.atZone(ZoneId.systemDefault()).toOffsetDateTime() : null;
+        }
+        if (targetType == ZonedDateTime.class) {
+            return instant != null ? instant.atZone(ZoneId.systemDefault()) : null;
+        }
+        if (targetType == java.sql.Timestamp.class) {
+            return instant != null ? java.sql.Timestamp.from(instant) : null;
+        }
+        if (targetType == java.sql.Date.class) {
+            return ld != null ? java.sql.Date.valueOf(ld) : null;
+        }
+        if (java.util.Date.class.isAssignableFrom(targetType)) {
+            return instant != null ? java.util.Date.from(instant) : null;
+        }
+
+        return ldt;
     }
 
     private Field findDeclaredField(Class<?> clazz, String fieldName) {

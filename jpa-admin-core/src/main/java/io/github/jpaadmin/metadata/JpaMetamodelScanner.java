@@ -133,6 +133,18 @@ public class JpaMetamodelScanner {
         } else {
             meta.setLabel(humanize(attr.getName()));
             meta.setOrder(100);
+            String lower = attr.getName().toLowerCase();
+            if (lower.equals("createdat") || lower.equals("createddate") || lower.equals("createdon")) {
+                meta.setReadOnly(true);
+                meta.setInForm(false);
+            }
+        }
+
+        if (field != null && field.isAnnotationPresent(Column.class)) {
+            Column col = field.getAnnotation(Column.class);
+            if (!col.updatable()) {
+                meta.setReadOnly(true);
+            }
         }
 
         // Widget
@@ -237,7 +249,9 @@ public class JpaMetamodelScanner {
         } else if (LocalDate.class.isAssignableFrom(javaType)) {
             meta.setFieldType(FieldType.DATE);
             meta.setFilterable(true);
-        } else if (LocalDateTime.class.isAssignableFrom(javaType) || Date.class.isAssignableFrom(javaType)) {
+        } else if (LocalDateTime.class.isAssignableFrom(javaType) ||
+                   Date.class.isAssignableFrom(javaType) ||
+                   java.time.temporal.Temporal.class.isAssignableFrom(javaType)) {
             meta.setFieldType(FieldType.DATE_TIME);
             meta.setFilterable(true);
         } else {
