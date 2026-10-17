@@ -33,6 +33,35 @@
 
 ---
 
+## Console Preview
+
+=== "Dashboard"
+
+    ![JPA Admin Dashboard](assets/images/dashboard.png)
+    *Auto-discovers JPA entities with KPI metrics and registered domain entity cards.*
+
+=== "Entity Table & Filters"
+
+    ![Entity Table & Filters](assets/images/entity-table.png)
+    *Full-text search, column sorting, pagination controls, and scalar filters.*
+
+=== "Foreign Key Relations"
+
+    ![Foreign Key Selectbox](assets/images/relation-select.png)
+    *Searchable relation selectbox for `@ManyToOne` / `@OneToOne` using descriptive `toString()` labels.*
+
+=== "Batch Actions & Selection"
+
+    ![Batch Selection](assets/images/batch-operations.png)
+    *Multi-record row selection for bulk operations with safe deletion confirmation modals.*
+
+=== "Authentication & Security"
+
+    ![Login View](assets/images/login.png)
+    *Protected administrator login with CSRF token rotation and secure session management.*
+
+---
+
 ## Why Spring Boot JPA Admin?
 
 <div class="feature-grid not-prose">

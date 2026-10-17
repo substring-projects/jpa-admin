@@ -2,9 +2,25 @@
 
 A Spring Boot starter that discovers JPA entities and generates an administration console for browsing, creating, updating, and deleting records. The React UI is embedded in a JAR and served by your Spring application at `/admin/`.
 
+[![Documentation](https://img.shields.io/badge/Docs-Online-blue?style=flat-square)](https://substring-projects.github.io/jpa-admin/)
+[![Creator](https://img.shields.io/badge/Creator-Durgesh%20Tiwari-orange?style=flat-square&logo=github)](https://github.com/durgeshcoder)
+
+- 📖 **Documentation:** [https://substring-projects.github.io/jpa-admin/](https://substring-projects.github.io/jpa-admin/)
+- 👤 **Creator Profile:** [Durgesh Tiwari (@durgeshcoder)](https://github.com/durgeshcoder)
+
 **Version:** `1.0.0-SNAPSHOT` · **Java:** 17+ · **Spring Boot:** 4.0.0
 
-[Documentation](docs/README.md) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
+[Documentation](https://substring-projects.github.io/jpa-admin/) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
+
+## Screenshots
+
+| Dashboard Overview | Entity Table & Search |
+| :---: | :---: |
+| ![Dashboard](docs/assets/images/dashboard.png) | ![Entity Table](docs/assets/images/entity-table.png) |
+
+| Foreign Key Relations (Selectbox) | Bulk Selection & Deletions |
+| :---: | :---: |
+| ![Foreign Key Selectbox](docs/assets/images/relation-select.png) | ![Batch Operations](docs/assets/images/batch-operations.png) |
 
 ## Capabilities
 
@@ -44,3 +60,7 @@ To integrate the starter into your own application, follow [installation](docs/i
 | Maintainers | [Release guide](docs/releasing.md) |
 
 The [requirements document](PROJECT_REQUIREMENTS.md) records product plans; it is not a list of completed features. Published artifact availability is not verified here. No project license file is currently included; licensing terms must be supplied by the owner.
+
+## Creator
+
+Created and maintained by **[Durgesh Tiwari](https://github.com/durgeshcoder)** ([@durgeshcoder](https://github.com/durgeshcoder)).
