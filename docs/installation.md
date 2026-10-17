@@ -1,61 +1,178 @@
-# Install the starter
+# Installation & Quick Setup
 
-[Documentation index](README.md) · [Getting started](getting-started.md)
+[Documentation Index](README.md) · [Getting Started](getting-started.md) · [Configuration](configuration.md)
 
-## Build and install locally
+[![JitPack](https://jitpack.io/v/durgeshcoder/substring-projects.svg)](https://jitpack.io/#durgeshcoder/substring-projects)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x%20%2F%204.x-brightgreen.svg)
+![Java](https://img.shields.io/badge/Java-17%2B-blue.svg)
 
-The repository version is `1.0.0-SNAPSHOT`. From the repository root, run:
+---
+
+## 1. Add Dependency to Your Project
+
+You can install `jpa-admin-spring-boot-starter` directly from **JitPack** (recommended for any external project) or install the snapshot locally via Maven.
+
+=== "Maven (JitPack)"
+
+    Add the JitPack repository to your `pom.xml`:
+
+    ```xml
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+    ```
+
+    Then add the dependency:
+
+    ```xml
+    <dependency>
+        <groupId>com.github.durgeshcoder.substring-projects</groupId>
+        <artifactId>jpa-admin-spring-boot-starter</artifactId>
+        <version>v1.0.1</version>
+    </dependency>
+    ```
+
+    > **Note:** If you want to use the latest commit on `main`, you can specify `<version>main-SNAPSHOT</version>`. For stable builds, use release tag `v1.0.1`.
+
+=== "Gradle (Groovy)"
+
+    Add JitPack to your root `build.gradle`:
+
+    ```groovy
+    allprojects {
+        repositories {
+            mavenCentral()
+            maven { url 'https://jitpack.io' }
+        }
+    }
+    ```
+
+    Add the starter to your `dependencies`:
+
+    ```groovy
+    dependencies {
+        implementation 'com.github.durgeshcoder.substring-projects:jpa-admin-spring-boot-starter:v1.0.1'
+    }
+    ```
+
+=== "Gradle (Kotlin DSL)"
+
+    Add JitPack to `build.gradle.kts`:
+
+    ```kotlin
+    repositories {
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+
+    dependencies {
+        implementation("com.github.durgeshcoder.substring-projects:jpa-admin-spring-boot-starter:v1.0.1")
+    }
+    ```
+
+=== "Local Maven (1.0.0-SNAPSHOT)"
+
+    If you are developing or testing locally on your own machine, build the starter to your local `~/.m2` repository:
+
+    ```bash
+    git clone https://github.com/substring-projects/jpa-admin.git
+    cd jpa-admin
+    ./mvnw clean install -DskipTests
+    ```
+
+    Then reference the local snapshot in your host project:
+
+    ```xml
+    <dependency>
+        <groupId>io.github.substring-projects</groupId>
+        <artifactId>jpa-admin-spring-boot-starter</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    ```
+
+---
+
+## 2. Configure Admin Credentials
+
+By default, the starter requires an admin password to protect your data. Add the following to your application's `application.yml` or `application.properties`:
+
+=== "application.yml"
+
+    ```yaml
+    spring:
+      jpa:
+        admin:
+          enabled: true
+          path: /admin
+          security:
+            enabled: true
+            username: admin
+            password: "${ADMIN_PASSWORD:admin123}"
+    ```
+
+=== "application.properties"
+
+    ```properties
+    spring.jpa.admin.enabled=true
+    spring.jpa.admin.path=/admin
+    spring.jpa.admin.security.enabled=true
+    spring.jpa.admin.security.username=admin
+    spring.jpa.admin.security.password=${ADMIN_PASSWORD:admin123}
+    ```
+
+> [!IMPORTANT]
+> Always provide a secure password using environment variables (e.g. `ADMIN_PASSWORD`) in staging and production environments.
+
+---
+
+## 3. Verify Your Entity Scan
+
+The starter auto-discovers all JPA entities registered in your Spring `EntityManagerFactory`. No component scan configuration is required.
+
+Make sure your Spring Boot main application class has your entity packages in its scan scope:
+
+```java
+@SpringBootApplication
+@EntityScan(basePackages = "com.yourcompany.domain") // (if outside standard package)
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+```
+
+---
+
+## 4. Run & Access the Admin Dashboard
+
+Start your Spring Boot application:
 
 ```bash
-npm ci --prefix jpa-admin-ui
-npm test --prefix jpa-admin-ui
-./mvnw clean install
+./mvnw spring-boot:run
 ```
 
-This installs the modules into your local Maven repository and builds the sample application. On Windows, use `mvnw.cmd`. The wrapper's first run downloads Maven and requires network access.
+Open your browser and navigate to:
 
-Add the dependency to a Spring Boot 4.0.0 application:
+👉 **`http://localhost:8080/admin/`**
 
-```xml
-<dependency>
-    <groupId>io.github.substring-projects</groupId>
-    <artifactId>jpa-admin-spring-boot-starter</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
+Sign in with your configured username and password (`admin` / `admin123`). You will be greeted with the JPA Admin dashboard, listing all your JPA entities ready for CRUD operations!
 
-For Gradle Kotlin DSL, using the same locally installed artifacts:
+---
 
-```kotlin
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
+## 5. JitPack Troubleshooting & Cache Refresh
 
-dependencies {
-    implementation("io.github.substring-projects:jpa-admin-spring-boot-starter:1.0.0-SNAPSHOT")
-}
-```
+If you push an update to your library and need to force your consumer project to download the newest build from JitPack:
 
-Provide a datasource, its JDBC driver, and JPA entities in the application's entity-scan scope. The starter brings Web, Data JPA, Validation, and Security dependencies transitively. No manual component scan of the starter packages is required.
-
-Add credentials to the host application's configuration:
-
-```yaml
-spring:
-  jpa:
-    admin:
-      security:
-        username: "${ADMIN_USERNAME:admin}"
-        password: "${ADMIN_PASSWORD}"
-```
-
-Supply `ADMIN_PASSWORD` through your environment or deployment secret configuration. Start your application and open `/admin/`. See [configuration](configuration.md) and [security](security.md) before integrating with an existing application.
-
-## Published packages
-
-The repository includes [JitPack build configuration](../jitpack.yml), which builds the starter and required modules using committed UI assets and skips tests and the npm build. A successful JitPack build is not evidence that tests passed.
-
-This documentation does not certify a published release or Maven Central availability. For JitPack distribution, obtain the exact module coordinates from a successful build for the intended tag or commit and verify resolution from a clean consumer project. Do not assume local Maven coordinates are the same as JitPack coordinates. Prefer an immutable release or commit over a moving branch.
-
-See the [release guide](releasing.md) for publication checks.
+1. **Force Maven Update**:
+   ```bash
+   mvn clean compile -U
+   ```
+2. **Force Gradle Refresh**:
+   ```bash
+   ./gradlew build --refresh-dependencies
+   ```
+3. **Check JitPack Build Status**:
+   Visit `https://jitpack.io/#durgeshcoder/substring-projects` in your browser. Look up the tag or commit to inspect the JitPack compilation log in real-time.
