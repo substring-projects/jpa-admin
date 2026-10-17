@@ -2,5 +2,5 @@ jdk:
   - openjdk17
 
 install:
-  # The frontend is pre-built in jpa-admin-ui/dist, so no Node.js/GLIBC is needed during remote JitPack build.
-  - mvn -B -ntp clean install -pl jpa-admin-spring-boot-starter -am -DskipNpmBuild=true -DskipTests
+  - chmod +x ./mvnw
+  - ./mvnw -B -ntp clean install -pl jpa-admin-spring-boot-starter -am -DskipNpmBuild=true -DskipTests
