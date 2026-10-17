@@ -22,13 +22,45 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 | :---: | :---: |
 | ![Foreign Key Selectbox](docs/assets/images/relation-select.png) | ![Batch Operations](docs/assets/images/batch-operations.png) |
 
-## Capabilities
+## Key Features & Capabilities
 
-- Metadata-driven tables and forms, pagination, sorting, text search, and scalar filters.
-- Searchable single-value relationships and read-only inline collections.
-- Entity and field customization through annotations, status badges, and custom actions.
-- Session authentication, CSRF protection, and a configured administrator account.
-- Responsive navigation, light/dark themes, and packaged frontend assets.
+### ⚛️ Smooth Single Page Application (SPA) with React & Tailwind CSS
+- **Modern React 19 & Vite Stack:** True Single Page Application architecture delivering instantaneous client-side navigation without full-page reloads.
+- **Fluid & Responsive UI:** Crafted with **Tailwind CSS** and **Radix UI** primitives for a polished, modern look across desktop, tablet, and mobile screens (with collapsible drawer navigation).
+- **Instant Light & Dark Theme:** Smooth, flicker-free toggling between Slate Light and Onyx Dark modes with persistent user preferences.
+- **Micro-Interactions & Feedback:** Skeleton loading placeholders, live toast notifications, and interactive modals for create, edit, view, and delete operations.
+
+### ⚡ Instant JPA Entity Discovery & Full CRUD
+- **Zero-Configuration Metamodel Introspection:** Automatically scans and discovers all JPA `@Entity` classes at boot time without boilerplate code.
+- **Dynamic Data Grids:** Server-side pagination, adjustable page sizes, multi-column sorting, and debounce-optimized full-text search.
+- **Scalar & Column Filtering:** Instant filtering across entity attributes, strings, numbers, dates, and enums.
+- **Smart Form Generation:** Type-aware form controls for string inputs, text areas, datetime formatters, toggle switches for booleans, and enum selects.
+
+### 🔗 Intelligent Relationship Management
+- **Searchable Foreign Keys:** Automatically resolves `@ManyToOne` and `@OneToOne` associations into asynchronous, searchable select dropdowns.
+- **Descriptive Entity Labels:** Displays human-readable labels derived from entity `toString()` or marked `@AdminField` identifier instead of raw database IDs.
+- **Inline Collection Views:** Clear, read-only inline representation for `@OneToMany` and `@ManyToMany` collections.
+
+### 🛡️ Built-in Enterprise Security & Session Management
+- **Cookie-Backed Authentication:** Dedicated, styled session login portal with configurable administrator credentials.
+- **Automated CSRF Protection:** Seamless CSRF token rotation and validation for all state-changing operations (POST, PUT, DELETE).
+- **Sensitive Field Masking:** Password and secret fields are automatically masked with reveal toggles and protected against accidental blank overwrites.
+
+### 🎨 Declarative Customization via Annotations
+- **`@AdminResource`:** Configure custom display names, entity icons, default sorting rules, read-only mode, and domain groupings.
+- **`@AdminField`:** Control field ordering, custom display names, form widgets (textarea, toggle, date picker), and read-only/hidden visibility.
+- **`@AdminBadge`:** Map entity status values and enums to clean, color-coded badges (success, warning, destructive, info).
+- **`@AdminAction`:** Register custom business actions and workflow operations directly on domain records.
+
+### 🗂️ Batch Operations & Safe Deletions
+- **Multi-Record Selection:** Check individual rows or use select-all to perform bulk operations across tables.
+- **Safety Confirmation Modals:** Destructive actions prompt explicit confirmation dialogs to prevent accidental data loss.
+
+### 📦 Zero Runtime Node.js Dependency
+- **Self-Contained Starter:** Pre-compiled React frontend assets are packaged directly into the Spring Boot starter JAR and served from the classpath at `/admin/`. No Node.js or npm required in production environments!
+
+### 🔌 Headless REST Management API
+- **Exposed REST Endpoints:** Complete API exposed under `/admin/api/**` providing metadata introspection (`/admin/api/metadata`, `/admin/api/resources/{resource}/schema`) and CRUD operations for programmatic integration.
 
 This snapshot is intended for trusted administrators. Granular permissions and comprehensive server-side field restrictions are incomplete. Read [security](docs/security.md) and [feature limitations](docs/limitations.md) before exposing application data. CSV/XLSX export and editable inline collections are not implemented.
 

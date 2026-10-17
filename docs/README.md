@@ -66,8 +66,20 @@
 
 <div class="feature-grid not-prose">
   <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">⚛️ Smooth Single Page Application (SPA)</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Built with <strong>React 19 & Vite</strong>. Seamless client-side navigation without full-page reloads, snappy view transitions, skeleton loaders, and instant UI state updates.</p>
+  </div>
+  <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">🎨 Modern Tailwind CSS & Radix UI</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Clean enterprise design styled with <strong>Tailwind CSS</strong> and accessible <strong>Radix UI</strong> primitives. Features responsive sidebars, mobile drawer navigation, modals, and toasts.</p>
+  </div>
+  <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">🌓 Seamless Light & Dark Theme</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Effortless one-click switching between classic Slate Light and deep Onyx Dark modes. Preferences persist across sessions with zero theme flicker.</p>
+  </div>
+  <div class="feature-box">
     <h4 class="text-slate-900 dark:text-white">⚡ Instant Administration</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Auto-discovers your entities via the JPA Metamodel and generates fully functional CRUD tables, search bars, pagination, and edit forms with zero code.</p>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Auto-discovers your entities via the JPA Metamodel on startup and generates fully functional CRUD tables, search bars, pagination, and edit forms with zero code.</p>
   </div>
   <div class="feature-box">
     <h4 class="text-slate-900 dark:text-white">🔗 Smart Foreign Key Relations</h4>
@@ -86,8 +98,20 @@
     <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Fine-tune behavior with lightweight annotations: <code>@AdminResource</code>, <code>@AdminField</code>, <code>@AdminBadge</code>, <code>@AdminAction</code>, and <code>@AdminWidget</code>.</p>
   </div>
   <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🔍 Dynamic Search & Filters</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Instant full-text string search, column sorting, enum badge filtering, and customizable batch actions for bulk record operations.</p>
+    <h4 class="text-slate-900 dark:text-white">🔍 Dynamic Search, Sort & Filters</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Debounce-accelerated full-text search, multi-column sorting, scalar attribute filters, and customizable page sizes.</p>
+  </div>
+  <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">🗂️ Batch Operations & Safe Deletions</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Multi-record row selection for bulk operations with safe deletion confirmation modals to prevent accidental data loss.</p>
+  </div>
+  <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">🔌 Headless REST Management API</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Complete REST management API exposed under <code>/admin/api/**</code> for metadata inspection, schema discovery, and programmatic CRUD integration.</p>
+  </div>
+  <div class="feature-box">
+    <h4 class="text-slate-900 dark:text-white">🧩 Type-Aware Form Controls</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Automatic form generation with datetime formatters, toggle switches for booleans, enum selects, textareas, and password reveal controls.</p>
   </div>
 </div>
 

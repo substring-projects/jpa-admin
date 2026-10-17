@@ -2,6 +2,9 @@
 
 This guide walks through using the administration console to manage entities, search records, handle foreign key relationships, and execute bulk operations.
 
+> [!TIP]
+> **Smooth Single Page Application (SPA):** The administration console is powered by **React 19 & Tailwind CSS**. Navigation between domain models, searching, sorting, pagination, and form editing occur seamlessly client-side with zero full-page reloads.
+
 ---
 
 ## 1. Dashboard & Entity Discovery
@@ -59,7 +62,7 @@ Select one or multiple rows to perform bulk actions directly from the table inte
 
 ---
 
-## 5. Security & Authentication
+## 5. Security, Themes & SPA Experience
 
 Access to `/admin/` is protected by cookie-backed session authentication and automated CSRF token handling.
 
@@ -67,4 +70,7 @@ Access to `/admin/` is protected by cookie-backed session authentication and aut
 
 - **Dedicated Login Portal:** Beautiful, isolated login interface matching the application theme.
 - **CSRF Token Rotation:** Every state-modifying action (create, update, delete) requires valid CSRF tokens automatically handled by the frontend client.
-- **Theme Switcher:** Toggle between light and dark modes via the header control.
+- **Instant Theme Switcher:** Toggle between classic Slate Light and deep Onyx Dark modes via the header control with zero flickering and persistent preference.
+- **Responsive Mobile Navigation:** Full mobile and tablet support featuring a sliding drawer menu powered by Radix UI sheets.
+- **Live Toast Notifications:** Instant visual feedback for successful creations, updates, or API errors.
+
