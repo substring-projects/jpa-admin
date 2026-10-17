@@ -13,6 +13,8 @@ admin-for-springboot/
 ├── jpa-admin-spring-boot-starter/       # Consumer dependency aggregator
 ├── jpa-admin-sample-app/               # H2 demo and annotated entities
 ├── PROJECT_REQUIREMENTS.md            # Product vision and implementation roadmap
+├── docs/                              # User, API, operations, and maintainer guides
+├── CONTRIBUTING.md                    # Contributor workflow
 └── README.md
 ```
 

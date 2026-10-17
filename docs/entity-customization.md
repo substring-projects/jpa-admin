@@ -83,7 +83,7 @@ The enum values must exist in your application's `ProductStatus` enum.
 private Category category;
 ```
 
-The record serializer uses `lookupProperty` for a related record's label. The lookup search endpoint prefers conventional display fields (`name`, `title`, `label`, `fullName`, `displayName`, `username`, `code`), then a non-sensitive string field, then the primary key; it also searches the primary key and it does not honor a relation-specific `searchProperty`. The UI requests up to 25 matches and supports searching, but not paged lookup results or quick-create dialogs.
+The record serializer uses `lookupProperty` for a related record's label. The lookup search endpoint prefers conventional display fields (`name`, `title`, `label`, `fullName`, `displayName`, `username`, `code`), then a non-sensitive string field, then the primary key; it also searches the primary key. It does not honor a relation-specific `searchProperty`. The UI requests up to 25 matches and supports searching, but not paged lookup results or quick-create dialogs.
 
 ### Sensitive fields
 

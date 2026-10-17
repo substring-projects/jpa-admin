@@ -1,0 +1,66 @@
+site_name: Spring Boot JPA Admin
+site_description: Setup, integration, API, and operations documentation for Spring Boot JPA Admin.
+site_url: https://substring-projects.github.io/jpa-admin/
+repo_url: https://github.com/substring-projects/jpa-admin
+repo_name: substring-projects/jpa-admin
+edit_uri: edit/main/docs/
+strict: true
+hooks:
+  - scripts/docs_hooks.py
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/database-cog
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+nav:
+  - Overview: README.md
+  - Get started:
+      - Run the sample: getting-started.md
+      - Install the starter: installation.md
+      - Configuration: configuration.md
+  - Guides:
+      - User guide: user-guide.md
+      - Entity customization: entity-customization.md
+      - Security: security.md
+      - REST API: api-reference.md
+  - Operations:
+      - Deployment: deployment.md
+      - Troubleshooting: troubleshooting.md
+      - Feature limitations: limitations.md
+  - Contributors:
+      - Architecture: architecture.md
+      - Development: development.md
+      - Releases: releasing.md
+      - Documentation website: publishing-docs.md
+      - Contributing: https://github.com/substring-projects/jpa-admin/blob/main/CONTRIBUTING.md

@@ -21,6 +21,10 @@ Documentation for application developers, administrators, and contributors using
 | Submit a change | [Contributing](../CONTRIBUTING.md) |
 | Prepare a release and its documentation | [Release guide](releasing.md) |
 
+## Website
+
+See [preview and publishing instructions](publishing-docs.md) to run the documentation locally or publish it with GitHub Pages.
+
 ## Documentation scope
 
 These guides describe the current repository implementation, including local source changes present when the guides were prepared. Example records and IDs are illustrative. Configuration and endpoint behavior are derived from source; publication availability and external compatibility are not implied.

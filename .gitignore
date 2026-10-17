@@ -9,3 +9,8 @@ dist/
 *.log
 .idea/
 *.iml
+
+# Generated documentation and local Python environment
+/site/
+/.venv-docs/
+__pycache__/

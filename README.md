@@ -4,7 +4,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 
 **Version:** `1.0.0-SNAPSHOT` · **Java:** 17+ · **Spring Boot:** 4.0.0
 
-[Documentation](docs/README.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
+[Documentation](docs/README.md) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
 
 ## Capabilities
 

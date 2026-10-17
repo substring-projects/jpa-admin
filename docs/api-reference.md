@@ -91,3 +91,58 @@ The frontend excludes generated IDs, computed/read-only fields, and unsupported 
 | `404`  | Entity or record not found where the service raises a not-found exception.                      |
 
 Entity-controller errors generally use `{"error": "message"}`. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/io/github/jpaadmin/web/AdminApiController.java) for the exact mappings.
+
+## Complete session example
+
+The following Bash example uses `curl`, `jq`, and the local sample. Start the backend first. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` to the configured account in your shell; do not commit actual credentials.
+
+```bash
+BASE_URL=http://localhost:8080
+ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD to the configured admin password}"
+SESSION_DIR=$(mktemp -d)
+trap 'rm -rf "$SESSION_DIR"' EXIT
+COOKIE_JAR="$SESSION_DIR/cookies"
+
+# Obtain a session cookie and the token needed even for login.
+curl --fail-with-body -sS -c "$COOKIE_JAR" \
+  "$BASE_URL/admin/api/auth/session" > "$SESSION_DIR/session.json"
+CSRF_HEADER=$(jq -r '.csrfHeader' "$SESSION_DIR/session.json")
+CSRF_TOKEN=$(jq -r '.csrfToken' "$SESSION_DIR/session.json")
+
+curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  -H "$CSRF_HEADER: $CSRF_TOKEN" \
+  --data-urlencode "username=$ADMIN_USERNAME" \
+  --data-urlencode "password=$ADMIN_PASSWORD" \
+  "$BASE_URL/admin/api/auth/login"
+
+# Authentication rotates the token; fetch the authenticated session again.
+curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  "$BASE_URL/admin/api/auth/session" > "$SESSION_DIR/session.json"
+CSRF_HEADER=$(jq -r '.csrfHeader' "$SESSION_DIR/session.json")
+CSRF_TOKEN=$(jq -r '.csrfToken' "$SESSION_DIR/session.json")
+
+curl --fail-with-body -sS -b "$COOKIE_JAR" \
+  "$BASE_URL/admin/api/metadata"
+
+curl --fail-with-body -sS -b "$COOKIE_JAR" \
+  "$BASE_URL/admin/api/Product?page=0&size=25&sort=id,desc"
+
+curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  -X POST -H "$CSRF_HEADER: $CSRF_TOKEN" \
+  "$BASE_URL/admin/api/auth/logout"
+```
+
+Run this example in a dedicated Bash session with `set -e`, or stop manually if any request fails. A login or logout success returns `204` with no response body. For create, update, batch delete, or actions, retain the authenticated cookie and add the refreshed CSRF header plus `Content-Type: application/json`. Execute writes before logout.
+
+## Client behavior and side effects
+
+- Use `page >= 0` and `size > 0`. No explicit application-level maximum page size is configured; choose conservative page and lookup sizes.
+- Lookup defaults to 20 results; a non-positive limit falls back to 20. There is no lookup pagination envelope.
+- Entity records are dynamic JSON objects. Obtain field names and action IDs from metadata; example IDs and records are not stable across installations.
+- Creating, updating, deleting, and invoking actions can change persistent business data. There is no documented dry-run endpoint or idempotency-key mechanism.
+- Do not automatically retry creates or actions after a timeout: the operation may already have committed. Inspect the resulting state before retrying.
+- Deleting a missing record returns `204`. Batch deletion reports the number of submitted IDs processed, including missing records; it is not a count of rows actually removed.
+- No API version prefix or stable compatibility guarantee is established for this snapshot. Recheck integration behavior when upgrading.
+
+The source of truth is the [controller](../jpa-admin-core/src/main/java/io/github/jpaadmin/web/AdminApiController.java), [CRUD service](../jpa-admin-core/src/main/java/io/github/jpaadmin/service/DynamicCrudService.java), and [security configuration](../jpa-admin-spring-boot-autoconfigure/src/main/java/io/github/jpaadmin/boot/config/JpaAdminSecurityConfiguration.java). This reference documents the existing API; it does not introduce a separate generated contract.
