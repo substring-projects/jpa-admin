@@ -29,15 +29,13 @@ theme:
     # Deep Slate / Onyx Dark Mode
     - scheme: slate
       primary: slate
-      accent: light blue
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
-    - navigation.tabs
-    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.path
@@ -49,6 +47,7 @@ theme:
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - toc.follow
 
 extra_css:
   - stylesheets/extra.css
@@ -81,21 +80,21 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
-  - Overview: README.md
-  - Get started:
+  - Home: README.md
+  - Getting Started:
       - Installation & JitPack: installation.md
-      - Run the sample: getting-started.md
+      - Run the Sample: getting-started.md
       - Configuration: configuration.md
-  - Guides:
-      - User guide: user-guide.md
-      - Entity customization: entity-customization.md
-      - Security & Auth: security.md
+  - Guides & Features:
+      - User Guide: user-guide.md
+      - Entity Customization: entity-customization.md
+      - Security & Authentication: security.md
       - REST API Reference: api-reference.md
-  - Operations:
+  - Operations & Production:
       - Deployment: deployment.md
       - Troubleshooting: troubleshooting.md
       - Limitations & Roadmap: limitations.md
-  - Contributors:
+  - Developers & Community:
       - Architecture: architecture.md
       - Development: development.md
       - Release Guide: releasing.md

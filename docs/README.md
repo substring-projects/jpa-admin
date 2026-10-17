@@ -1,110 +1,138 @@
 # Spring Boot JPA Admin
 
-<div class="hero-card">
+<div class="hero-card not-prose">
   <div class="hero-title">Spring Boot JPA Admin</div>
-  <p style="font-size: 1.15rem; color: var(--md-default-fg-color--light); margin-bottom: 1.25rem;">
-    An enterprise-grade, auto-generated administration UI and RESTful management engine for Spring Boot JPA applications.
+  <p class="text-lg text-slate-600 dark:text-slate-300 mb-6 max-w-2xl leading-relaxed">
+    Instant, production-ready administration UI and dynamic REST management engine for Spring Boot JPA applications. Zero boilerplate, zero frontend setup.
   </p>
-  <div>
-    <span class="badge-chip">🚀 Spring Boot 3.x / 4.x</span>
-    <span class="badge-chip">⚡ Java 17+</span>
-    <span class="badge-chip">⚛️ React 19 & Tailwind</span>
-    <span class="badge-chip">📦 Zero-Config Autowiring</span>
-    <span class="badge-chip">🔒 Built-in Security & CSRF</span>
+  
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <a href="https://jitpack.io/#substring-projects/jpa-admin" target="_blank" class="no-underline inline-block">
+      <img src="https://img.shields.io/badge/JitPack-v1.0.1-2e7d32?style=flat-square&logo=jitpack" alt="JitPack Release" class="h-6 rounded">
+    </a>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+      Spring Boot 3.x / 4.x
+    </span>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+      Java 17+
+    </span>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
+      React 19 & Tailwind
+    </span>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="installation/" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all duration-150 no-underline">
+      🚀 Get Started
+    </a>
+    <a href="https://github.com/substring-projects/jpa-admin" target="_blank" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-150 no-underline">
+      📦 GitHub Repository
+    </a>
   </div>
 </div>
 
 ---
 
-## Key Capabilities
+## Why Spring Boot JPA Admin?
 
-<div class="feature-grid">
+<div class="feature-grid not-prose">
   <div class="feature-box">
-    <h4>⚡ Instant Administration</h4>
-    <p>Zero boilerplates. Automatically scans your JPA metamodel and renders production-ready CRUD tables, interactive forms, and relation pickers.</p>
+    <h4 class="text-slate-900 dark:text-white">⚡ Instant Administration</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Auto-discovers your entities via the JPA Metamodel and generates fully functional CRUD tables, search bars, pagination, and edit forms with zero code.</p>
   </div>
   <div class="feature-box">
-    <h4>🔗 Intelligent Relations</h4>
-    <p>Seamlessly handles <code>@ManyToOne</code> and <code>@OneToOne</code> foreign keys with live searchable selectboxes, respecting entity <code>toString()</code> methods.</p>
+    <h4 class="text-slate-900 dark:text-white">🔗 Smart Foreign Key Relations</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Handles <code>@ManyToOne</code> and <code>@OneToOne</code> relations with searchable async dropdowns. Automatically calls your entity's <code>toString()</code> for readable labels.</p>
   </div>
   <div class="feature-box">
-    <h4>🛡️ Enterprise Security</h4>
-    <p>Cookie-based sessions, CSRF token validation, role-based authorization, and automatic masking of sensitive attributes like passwords.</p>
+    <h4 class="text-slate-900 dark:text-white">🛡️ Built-in Security & CSRF</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Cookie-backed session authentication, automatic CSRF token validation, role-based entity permissions, and automatic masking of sensitive password fields.</p>
   </div>
   <div class="feature-box">
-    <h4>🎨 Rich Customization</h4>
-    <p>Intuitive annotations like <code>@AdminResource</code>, <code>@AdminField</code>, <code>@AdminBadge</code>, and <code>@AdminAction</code> for complete UI control.</p>
+    <h4 class="text-slate-900 dark:text-white">📦 Zero Runtime Node.js Dependency</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">The modern React 19 UI is pre-compiled and served directly from the Spring Boot starter JAR as static classpath assets. No Node.js or npm required at runtime.</p>
   </div>
   <div class="feature-box">
-    <h4>⚡ Standalone Bundled UI</h4>
-    <p>The modern React frontend is pre-compiled and served directly from the Spring Boot starter JAR with zero Node/npm runtime dependency.</p>
+    <h4 class="text-slate-900 dark:text-white">🎨 Declarative Customization</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Fine-tune behavior with lightweight annotations: <code>@AdminResource</code>, <code>@AdminField</code>, <code>@AdminBadge</code>, <code>@AdminAction</code>, and <code>@AdminWidget</code>.</p>
   </div>
   <div class="feature-box">
-    <h4>📊 Dynamic Filtering & Sorting</h4>
-    <p>Real-time keyword search, enum filters, pagination controls, and custom bulk actions out-of-the-box.</p>
+    <h4 class="text-slate-900 dark:text-white">🔍 Dynamic Search & Filters</h4>
+    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Instant full-text string search, column sorting, enum badge filtering, and customizable batch actions for bulk record operations.</p>
   </div>
 </div>
 
 ---
 
-## Quick Navigation
+## 30-Second Quickstart
 
-| What are you looking for? | Guide Link |
-| :--- | :--- |
-| **Install via JitPack or Maven** | [Installation Guide](installation.md) |
-| **Run the Demo Application** | [Getting Started](getting-started.md) |
-| **Configure Security & Paths** | [Configuration Reference](configuration.md) |
-| **Customize Entities & Badges** | [Entity Customization](entity-customization.md) |
-| **REST API Documentation** | [API Reference](api-reference.md) |
-| **Authentication & Permissions** | [Security Architecture](security.md) |
-| **Production Deployment Checklist** | [Deployment Guide](deployment.md) |
-| **Troubleshooting & Fixes** | [Troubleshooting](troubleshooting.md) |
-| **Preview & Publish Documentation** | [Documentation Website](publishing-docs.md) |
-| **Contributing Code & Pull Requests** | [Contributing](../CONTRIBUTING.md) |
+### 1. Add Repository & Starter Dependency
 
----
+=== "Maven (pom.xml)"
 
-## 30-Second Example
+    ```xml
+    <!-- Mandatory: Add JitPack repository -->
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
-Add the starter dependency via JitPack:
+    <!-- Add the starter -->
+    <dependencies>
+        <dependency>
+            <groupId>com.github.substring-projects</groupId>
+            <artifactId>jpa-admin-spring-boot-starter</artifactId>
+            <version>v1.0.1</version>
+        </dependency>
+    </dependencies>
+    ```
 
-```xml
-<dependency>
-    <groupId>com.github.durgeshcoder.substring-projects</groupId>
-    <artifactId>jpa-admin-spring-boot-starter</artifactId>
-    <version>v1.0.1</version>
-</dependency>
-```
+=== "Gradle (build.gradle)"
 
-Annotate your standard JPA entity:
-
-```java
-@Entity
-@AdminResource(displayName = "Product", group = "Catalog", icon = "package")
-public class Product {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @AdminField(label = "Product Title", searchable = true, sortable = true)
-    private String name;
-
-    @ManyToOne
-    @AdminField(label = "Category")
-    private Category category;
-
-    @AdminBadge(mapping = {
-        @BadgeMap(value = "ACTIVE", color = BadgeColor.GREEN, label = "Active"),
-        @BadgeMap(value = "ARCHIVED", color = BadgeColor.GRAY, label = "Archived")
-    })
-    private ProductStatus status;
-
-    @Override
-    public String toString() {
-        return name;
+    ```groovy
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
-}
+
+    dependencies {
+        implementation 'com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.1'
+    }
+    ```
+
+### 2. Configure Credentials
+
+In `application.yml`:
+
+```yaml
+spring:
+  jpa:
+    admin:
+      enabled: true
+      path: /admin
+      security:
+        enabled: true
+        username: admin
+        password: "${ADMIN_PASSWORD:admin123}"
 ```
 
-Start your Spring Boot app and open **`http://localhost:8080/admin/`** to view your dashboard!
+### 3. Open Admin Dashboard
+
+Run your Spring Boot application and open:
+
+👉 **`http://localhost:8080/admin/`**
+
+---
+
+## Documentation Directory
+
+Browse the complete documentation using the topics in the left sidebar:
+
+| Category | Topics |
+| :--- | :--- |
+| **Getting Started** | [Installation & JitPack Setup](installation.md) · [Running the Demo App](getting-started.md) · [Configuration Options](configuration.md) |
+| **Guides & Features** | [User Guide](user-guide.md) · [Entity Customization](entity-customization.md) · [Security & Auth](security.md) · [REST API Reference](api-reference.md) |
+| **Operations** | [Deployment Guide](deployment.md) · [Troubleshooting](troubleshooting.md) · [Limitations & Roadmap](limitations.md) |
+| **Developers** | [Architecture](architecture.md) · [Local Development](development.md) · [Release Guide](releasing.md) · [Contributing](../CONTRIBUTING.md) |
