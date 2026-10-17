@@ -114,7 +114,7 @@ The repository does not establish a published Maven Central release. The example
 
 ```xml
 <dependency>
-    <groupId>io.github.jpaadmin</groupId>
+    <groupId>io.github.substring-projects</groupId>
     <artifactId>jpa-admin-spring-boot-starter</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
@@ -131,7 +131,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.github.jpaadmin:jpa-admin-spring-boot-starter:1.0.0-SNAPSHOT'
+    implementation 'io.github.substring-projects:jpa-admin-spring-boot-starter:1.0.0-SNAPSHOT'
 }
 ```
 

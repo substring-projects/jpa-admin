@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>io.github.jpaadmin</groupId>
+    <groupId>io.github.substring-projects</groupId>
     <artifactId>jpa-admin-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -39,22 +39,22 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.github.jpaadmin</groupId>
+                <groupId>io.github.substring-projects</groupId>
                 <artifactId>jpa-admin-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.github.jpaadmin</groupId>
+                <groupId>io.github.substring-projects</groupId>
                 <artifactId>jpa-admin-ui</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.github.jpaadmin</groupId>
+                <groupId>io.github.substring-projects</groupId>
                 <artifactId>jpa-admin-spring-boot-autoconfigure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.github.jpaadmin</groupId>
+                <groupId>io.github.substring-projects</groupId>
                 <artifactId>jpa-admin-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
