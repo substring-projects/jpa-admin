@@ -53,6 +53,10 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - https://cdn.tailwindcss.com
+  - javascripts/tailwind-config.js
+
 plugins:
   - search
 

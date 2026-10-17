@@ -1,9 +1,9 @@
-/* Classic, clean typography and modern enterprise styling */
+/* Tailwind-inspired classic enterprise design tokens */
 :root {
-  --md-primary-fg-color:        #1e293b;
-  --md-primary-fg-color--light:  #334155;
-  --md-primary-fg-color--dark:   #0f172a;
-  --md-accent-fg-color:         #2563eb;
+  --md-primary-fg-color:        #0f172a; /* Tailwind Slate 900 */
+  --md-primary-fg-color--light:  #1e293b; /* Tailwind Slate 800 */
+  --md-primary-fg-color--dark:   #020617; /* Tailwind Slate 950 */
+  --md-accent-fg-color:         #4f46e5; /* Tailwind Indigo 600 */
   --md-code-font:               "JetBrains Mono", SFMono-Regular, Consolas, Menlo, monospace;
 }
 
@@ -11,109 +11,128 @@
   --md-primary-fg-color:        #0f172a;
   --md-primary-fg-color--light:  #1e293b;
   --md-primary-fg-color--dark:   #020617;
-  --md-accent-fg-color:         #38bdf8;
+  --md-accent-fg-color:         #6366f1; /* Tailwind Indigo 500 */
   --md-default-bg-color:        #0b0f19;
   --md-default-bg-color--light:  #111827;
 }
 
-/* Header & Tabs styling */
+/* Header & Tabs */
 .md-header {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(15, 23, 42, 0.95);
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .md-tabs {
-  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  background-color: #1e293b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-/* Content typography */
+/* Typography */
 .md-typeset h1 {
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--md-default-fg-color--heavy);
 }
 
 .md-typeset h2 {
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   border-bottom: 1px solid var(--md-default-fg-color--lightest);
-  padding-bottom: 0.3em;
+  padding-bottom: 0.4em;
+  margin-top: 1.8em;
 }
 
 .md-typeset h3 {
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-/* Code blocks */
+/* Code Blocks */
 .md-typeset pre > code {
-  border-radius: 8px;
+  border-radius: 0.75rem;
   font-size: 0.85em;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .highlight {
-  border-radius: 8px;
+  border-radius: 0.75rem;
   border: 1px solid var(--md-default-fg-color--lightest);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
-/* Content tabs styling */
+/* Tabbed Pills */
 .md-typeset .tabbed-labels {
   border-bottom: 2px solid var(--md-default-fg-color--lightest);
+  gap: 0.25rem;
 }
 
 .md-typeset .tabbed-labels > label {
   font-weight: 600;
   font-size: 0.85rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  padding: 0.5rem 1rem;
 }
 
 /* Tables */
 .md-typeset table:not([class]) {
-  border-radius: 8px;
+  border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid var(--md-default-fg-color--lightest);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
 }
 
 .md-typeset table:not([class]) th {
   background-color: var(--md-default-bg-color--light);
   font-weight: 600;
-}
-
-/* Badges and Chips */
-.badge-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 9999px;
+  text-transform: uppercase;
   font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.25;
-  background-color: var(--md-accent-fg-color--transparent);
-  color: var(--md-accent-fg-color);
-  border: 1px solid var(--md-accent-fg-color);
-  text-decoration: none !important;
-  margin-right: 0.25rem;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
 }
 
-/* Hero card banner */
+/* Tailwind-style Alerts / Callouts */
+.tw-alert-danger {
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02));
+  border-left: 4px solid #ef4444;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+
+.tw-alert-info {
+  background: linear-gradient(to right, rgba(79, 70, 229, 0.08), rgba(79, 70, 229, 0.02));
+  border-left: 4px solid #4f46e5;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+
+/* Hero Section */
 .hero-card {
-  padding: 2rem 2.5rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(30, 41, 59, 0.04) 100%);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  padding: 2.5rem 2.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(15, 23, 42, 0.04) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.25);
   margin-bottom: 2rem;
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.07);
 }
 
 .hero-title {
-  font-size: 2.25rem !important;
+  font-size: 2.5rem !important;
   font-weight: 800 !important;
-  line-height: 1.2 !important;
-  margin-top: 0 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.04em !important;
+  background: linear-gradient(135deg, #1e293b 30%, #4f46e5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin-bottom: 0.75rem !important;
-  letter-spacing: -0.03em !important;
-  background: linear-gradient(120deg, var(--md-default-fg-color--heavy) 30%, var(--md-accent-fg-color) 100%);
+}
+
+[data-md-color-scheme="slate"] .hero-title {
+  background: linear-gradient(135deg, #ffffff 40%, #818cf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -127,24 +146,53 @@
 }
 
 .feature-box {
-  padding: 1.25rem;
-  border-radius: 10px;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--md-default-fg-color--lightest);
   background-color: var(--md-default-bg-color);
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .feature-box:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08);
-  border-color: var(--md-accent-fg-color);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 20px -5px rgba(79, 70, 229, 0.12);
+  border-color: #6366f1;
 }
 
 .feature-box h4 {
   margin-top: 0 !important;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.05rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* Modern Pill Badges */
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background-color: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  text-decoration: none !important;
+  margin-right: 0.35rem;
+  margin-bottom: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+[data-md-color-scheme="slate"] .badge-chip {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.badge-chip:hover {
+  transform: scale(1.03);
 }
