@@ -82,7 +82,7 @@
     <!-- Add the starter -->
     <dependencies>
         <dependency>
-            <groupId>com.github.substring-projects</groupId>
+            <groupId>com.github.substring-projects.jpa-admin</groupId>
             <artifactId>jpa-admin-spring-boot-starter</artifactId>
             <version>v1.0.1</version>
         </dependency>
@@ -98,7 +98,7 @@
     }
 
     dependencies {
-        implementation 'com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.1'
+        implementation 'com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1'
     }
     ```
 

@@ -23,7 +23,7 @@
         JitPack packages are <strong>NOT</strong> hosted on Maven Central. If you only copy the <code>&lt;dependency&gt;</code> without adding the <code>&lt;repositories&gt;</code> block pointing to <code>https://jitpack.io</code>, your build will <strong>fail immediately</strong> with:
       </p>
       <code class="text-xs text-red-600 dark:text-red-400 bg-red-100/60 dark:bg-red-950/70 px-2 py-1.5 rounded block border border-red-200 dark:border-red-900 font-mono">
-        [ERROR] Could not find artifact com.github.substring-projects:jpa-admin-spring-boot-starter in central (https://repo.maven.apache.org/maven2)
+        [ERROR] Could not find artifact com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter in central (https://repo.maven.apache.org/maven2)
       </code>
     </div>
   </div>
@@ -47,7 +47,7 @@ Use the tabs below to copy the complete configuration for your build tool:
     <!-- 2. Add JPA Admin Starter dependency -->
     <dependencies>
         <dependency>
-            <groupId>com.github.substring-projects</groupId>
+            <groupId>com.github.substring-projects.jpa-admin</groupId>
             <artifactId>jpa-admin-spring-boot-starter</artifactId>
             <version>v1.0.1</version>
         </dependency>
@@ -72,7 +72,7 @@ Use the tabs below to copy the complete configuration for your build tool:
 
     // 2. Add JPA Admin Starter dependency
     dependencies {
-        implementation 'com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.1'
+        implementation 'com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1'
     }
     ```
 
@@ -89,7 +89,7 @@ Use the tabs below to copy the complete configuration for your build tool:
 
     // 2. Add JPA Admin Starter dependency
     dependencies {
-        implementation("com.github.substring-projects:jpa-admin-spring-boot-starter:v1.0.1")
+        implementation("com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1")
     }
     ```
 
