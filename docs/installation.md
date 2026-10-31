@@ -18,8 +18,7 @@ The starter brings Spring Web, Spring Data JPA, Validation and Spring Security.
 
 Use the `com.substringtechnologies` coordinates for the `0.1.0` Maven Central release. Maven uses Central by default; Gradle needs `mavenCentral()`.
 
-!!! note "Publication availability"
-    At the time this guide was prepared, `0.1.0` was being published and the public artifact endpoint was not yet available. If resolution fails, check the [Central listing](https://central.sonatype.com/artifact/com.substringtechnologies/jpa-admin-spring-boot-starter/0.1.0), or use the source-build instructions below. A successful Portal upload alone does not mean the release is publicly downloadable.
+Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/artifact/com.substringtechnologies/jpa-admin-spring-boot-starter/0.1.0). The parent POM and all four library modules are publicly available. No JitPack repository is needed.
 
 === "Maven"
 
