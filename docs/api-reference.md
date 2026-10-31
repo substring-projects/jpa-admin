@@ -90,7 +90,7 @@ The frontend excludes generated IDs, computed/read-only fields, and unsupported 
 | `403`  | Missing/invalid CSRF token or insufficient authority.                                           |
 | `404`  | Entity or record not found where the service raises a not-found exception.                      |
 
-Entity-controller errors generally use `{"error": "message"}`. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/io/github/jpaadmin/web/AdminApiController.java) for the exact mappings.
+Entity-controller errors generally use `{"error": "message"}`. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java) for the exact mappings.
 
 ## Complete session example
 
@@ -145,4 +145,4 @@ Run this example in a dedicated Bash session with `set -e`, or stop manually if 
 - Deleting a missing record returns `204`. Batch deletion reports the number of submitted IDs processed, including missing records; it is not a count of rows actually removed.
 - No API version prefix or stable compatibility guarantee is established for this snapshot. Recheck integration behavior when upgrading.
 
-The source of truth is the [controller](../jpa-admin-core/src/main/java/io/github/jpaadmin/web/AdminApiController.java), [CRUD service](../jpa-admin-core/src/main/java/io/github/jpaadmin/service/DynamicCrudService.java), and [security configuration](../jpa-admin-spring-boot-autoconfigure/src/main/java/io/github/jpaadmin/boot/config/JpaAdminSecurityConfiguration.java). This reference documents the existing API; it does not introduce a separate generated contract.
+The source of truth is the [controller](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java), [CRUD service](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/service/DynamicCrudService.java), and [security configuration](../jpa-admin-spring-boot-autoconfigure/src/main/java/com/substringtechnologies/jpaadmin/boot/config/JpaAdminSecurityConfiguration.java). This reference documents the existing API; it does not introduce a separate generated contract.

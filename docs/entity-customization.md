@@ -4,12 +4,12 @@
 
 Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
 
-Annotations live in `io.github.jpaadmin.annotations`. Prefer field-based JPA mappings with annotations on fields for the current scanner. Working examples are available in [the sample domain package](../jpa-admin-sample-app/src/main/java/com/example/demo/domain).
+Annotations live in `com.substringtechnologies.jpaadmin.annotations`. Prefer field-based JPA mappings with annotations on fields for the current scanner. Working examples are available in [the sample domain package](../jpa-admin-sample-app/src/main/java/com/substringtechnologies/jpaadmin/sample/domain).
 
 ### Resource and field presentation
 
 ```java
-import io.github.jpaadmin.annotations.*;
+import com.substringtechnologies.jpaadmin.annotations.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
@@ -58,7 +58,7 @@ public class Product {
 | `@AdminAction`              | `name`, `icon`, `confirmation`, `scope`                                                                                            | Exposes supported entity methods as actions.                                                                                       |
 | `@AdminPermission`          | `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles`                                                                  | Declared API; granular authorization is not implemented.                                                                           |
 
-For complete option defaults, see [the annotation sources](../jpa-admin-core/src/main/java/io/github/jpaadmin/annotations).
+For complete option defaults, see [the annotation sources](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/annotations).
 
 ### Status badges
 

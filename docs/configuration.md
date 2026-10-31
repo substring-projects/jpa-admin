@@ -119,7 +119,7 @@ The host application must provide `ADMIN_PASSWORD` when using an environment-var
 
 ### Property reference
 
-All properties below use the `spring.jpa.admin.` prefix. Defaults come from [JpaAdminProperties](../jpa-admin-spring-boot-autoconfigure/src/main/java/io/github/jpaadmin/boot/config/JpaAdminProperties.java).
+All properties below use the `spring.jpa.admin.` prefix. Defaults come from [JpaAdminProperties](../jpa-admin-spring-boot-autoconfigure/src/main/java/com/substringtechnologies/jpaadmin/boot/config/JpaAdminProperties.java).
 
 | Property            | Default                 | Current behavior                                                                                                                                                 |
 | ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |

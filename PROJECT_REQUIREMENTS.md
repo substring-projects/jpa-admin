@@ -168,9 +168,9 @@ spring:
           - "SUPER_ADMIN"
       entities:
         include:
-          - "com.example.domain.*"
+          - "com.substringtechnologies.jpaadmin.sample.domain.*"
         exclude:
-          - "com.example.domain.InternalFlywayHistory"
+          - "com.substringtechnologies.jpaadmin.sample.domain.InternalFlywayHistory"
 ```
 
 ### 5.2 Comprehensive Annotation-Driven UI Customization
@@ -387,11 +387,11 @@ public class Customer {
 #### 5.2.6 Full Annotated Entity Example
 
 ```java
-package com.example.domain;
+package com.substringtechnologies.jpaadmin.sample.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import io.github.jpaadmin.annotations.*;
+import com.substringtechnologies.jpaadmin.annotations.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -531,7 +531,7 @@ admin-for-springboot/
 ├── pom.xml                                  # Root aggregator & dependency management
 ├── jpa-admin-core/                          # Java: Metamodel scanner, annotations, generic CRUD
 │   ├── pom.xml
-│   └── src/main/java/io/github/jpaadmin/
+│   └── src/main/java/com/substringtechnologies/jpaadmin/
 │       ├── annotations/                     # @AdminResource, @AdminField, @AdminInline...
 │       ├── metadata/                        # JpaMetamodelScanner & DTO models
 │       ├── service/                         # DynamicCrudService (CriteriaBuilder queries)
@@ -546,14 +546,14 @@ admin-for-springboot/
 │       └── views/                           # ListView, FormView, DetailView, DashboardView
 ├── jpa-admin-spring-boot-autoconfigure/     # Auto-configuration & WebMvc resource mapping
 │   ├── pom.xml
-│   └── src/main/java/io/github/jpaadmin/boot/
+│   └── src/main/java/com/substringtechnologies/jpaadmin/boot/
 │       ├── config/                          # JpaAdminProperties & JpaAdminWebMvcConfigurer
 │       └── JpaAdminAutoConfiguration.java
 ├── jpa-admin-spring-boot-starter/           # Starter POM aggregating core + autoconfigure + ui
 │   └── pom.xml
 └── jpa-admin-sample-app/                    # Runnable Spring Boot demo with sample entities
     ├── pom.xml
-    └── src/main/java/com/example/demo/
+    └── src/main/java/com/substringtechnologies/jpaadmin/sample/
 ```
 
 ---
@@ -851,7 +851,7 @@ jpa-admin-spring-boot-autoconfigure/
 
 Inside `AutoConfiguration.imports`:
 ```properties
-io.github.jpaadmin.boot.JpaAdminAutoConfiguration
+com.substringtechnologies.jpaadmin.boot.JpaAdminAutoConfiguration
 ```
 
 The auto-configuration class:
@@ -861,7 +861,7 @@ The auto-configuration class:
 @ConditionalOnClass({EntityManagerFactory.class, WebMvcConfigurer.class})
 @ConditionalOnProperty(prefix = "spring.jpa.admin", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(JpaAdminProperties.class)
-@ComponentScan(basePackages = "io.github.jpaadmin")
+@ComponentScan(basePackages = "com.substringtechnologies.jpaadmin")
 public class JpaAdminAutoConfiguration {
 
     @Bean

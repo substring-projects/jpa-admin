@@ -107,7 +107,7 @@ Use the tabs below to copy the complete configuration for your build tool:
 
     ```xml
     <dependency>
-        <groupId>io.github.substring-projects</groupId>
+        <groupId>com.substringtechnologies</groupId>
         <artifactId>jpa-admin-spring-boot-starter</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </dependency>

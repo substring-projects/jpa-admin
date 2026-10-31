@@ -30,4 +30,4 @@ spring:
 
 logging:
   level:
-    io.github.jpaadmin: DEBUG
+    com.substringtechnologies.jpaadmin: DEBUG
