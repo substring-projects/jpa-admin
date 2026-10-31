@@ -15,7 +15,7 @@
 ```bash
 npm ci --prefix jpa-admin-ui          # install the UI's locked dependencies
 ./mvnw clean package                  # build everything and run the Java tests
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar
 ```
 
 Open **<http://localhost:8080/admin/>** and sign in with **`admin`** / **`admin`**.
@@ -76,13 +76,13 @@ The sample's entities in [`jpa-admin-sample-app/…/domain`](../jpa-admin-sample
 
 ```bash
 # Another port
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --server.port=8081
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --server.port=8081
 
 # Serve the console from /backoffice instead of /admin
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --spring.jpa.admin.path=/backoffice
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --spring.jpa.admin.path=/backoffice
 
 # Try your own brand color
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --spring.jpa.admin.primary-color='#2563eb'
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --spring.jpa.admin.primary-color='#2563eb'
 ```
 
 To work on the UI with live reload, see [Development](development.md#frontend-development).

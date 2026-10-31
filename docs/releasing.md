@@ -2,7 +2,7 @@
 
 <p class="jpa-lead">Build, sign and publish the parent POM and four library modules together. The sample application stays in GitHub and is excluded from Central publication.</p>
 
-The current source version is `0.1.0`. This is the first Maven Central release; older JitPack tags use a separate version sequence. The project uses [Apache License 2.0](../LICENSE).
+The current development version is `0.2.0-SNAPSHOT`. The latest published release is `0.1.0`, the first Maven Central release; older JitPack tags use a separate version sequence. The project uses [Apache License 2.0](../LICENSE).
 
 ## Prepare a release
 

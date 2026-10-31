@@ -50,7 +50,7 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
 
 === "Built from source"
 
-    Requires JDK 17+, Node.js 20+ and npm. From a checkout whose root POM declares `0.1.0`:
+    Requires JDK 17+, Node.js 20+ and npm. The current development checkout uses `0.2.0-SNAPSHOT`:
 
     ```bash
     git clone https://github.com/substring-projects/jpa-admin.git
@@ -59,7 +59,7 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
     ./mvnw clean install
     ```
 
-    Then use the same Maven dependency above. For Gradle local testing, add `mavenLocal()` before `mavenCentral()`.
+    Then use the same Maven dependency above with `<version>0.2.0-SNAPSHOT</version>`. This version is installed only on your machine. For Gradle local testing, add `mavenLocal()` before `mavenCentral()` and use version `0.2.0-SNAPSHOT`.
 
 The starter downloads core, auto-configuration and UI modules transitively. The UI assets live in the `jpa-admin-ui` JAR; consumers do not build React or install Node.js.
 

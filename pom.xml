@@ -13,7 +13,7 @@
 
     <groupId>com.substringtechnologies</groupId>
     <artifactId>jpa-admin-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Spring Boot JPA Admin (Parent)</name>
     <description>Zero-configuration dynamic Admin UI generator for JPA entities in Spring Boot</description>

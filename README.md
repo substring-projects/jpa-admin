@@ -8,7 +8,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - 📖 **Documentation:** [https://substring-projects.github.io/jpa-admin/](https://substring-projects.github.io/jpa-admin/)
 - 👤 **Creator Profile:** [Durgesh Tiwari (@durgeshcoder)](https://github.com/durgeshcoder)
 
-**Version:** `0.1.0` · **Java:** 17+ · **Spring Boot:** 4.0.0
+**Published:** `0.1.0` · **Development:** `0.2.0-SNAPSHOT` · **Java:** 17+ · **Spring Boot:** 4.0.0
 
 [Documentation](https://substring-projects.github.io/jpa-admin/) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
 
@@ -79,7 +79,7 @@ Prerequisites: JDK 17+, Node.js 20+, and npm on `PATH`. The included Maven Wrapp
 npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
 ./mvnw clean package
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar
 ```
 
 On Windows, replace `./mvnw` with `mvnw.cmd`.
