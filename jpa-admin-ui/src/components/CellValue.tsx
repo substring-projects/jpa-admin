@@ -1,8 +1,8 @@
 import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router';
-import { Check, Copy, Minus, X } from 'lucide-react';
+import { Check, Copy, FileText, Minus, X } from 'lucide-react';
 import type { FieldMetadata } from '@/types/metadata';
-import { enumTone, formatDate, formatNumber, formatRelative, humanize, isUuid, shortId } from '@/lib/format';
+import { enumTone, fileNameFromUrl, formatDate, formatNumber, formatRelative, humanize, isSafeUrl, isUuid, shortId } from '@/lib/format';
 import { ToneBadge } from '@/components/ToneBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -110,8 +110,18 @@ export function CellValue({ field, value, expanded = false }: Props) {
   }
 
   // Only web URLs and same-origin paths; never javascript: or data: values.
-  if (field.widget === 'IMAGE_URL' && /^(https?:\/\/|\/(?!\/))/i.test(text)) {
-    return <img src={text} alt="" loading="lazy" className={cn('rounded border object-cover', expanded ? 'max-h-40' : 'size-8')} />;
+  if ((field.widget === 'IMAGE_URL' || field.upload) && isSafeUrl(text)) {
+    const image = field.widget === 'IMAGE_URL' || field.upload?.image || /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(text);
+    if (image) {
+      return <a href={text} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} aria-label="Open image" className="block w-fit">
+        {/* An explicit height keeps SVGs without intrinsic dimensions from collapsing. */}
+        <img src={text} alt="" loading="lazy" className={cn('rounded border bg-muted', expanded ? 'h-40 w-auto max-w-full object-contain' : 'size-9 object-cover')} />
+      </a>;
+    }
+    return <a href={text} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+      className="inline-flex max-w-64 items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-xs font-medium hover:bg-accent">
+      <FileText className="size-3.5 shrink-0 text-muted-foreground" /><span className="truncate">{fileNameFromUrl(text)}</span>
+    </a>;
   }
 
   if (isUuid(text) || field.primaryKey) {

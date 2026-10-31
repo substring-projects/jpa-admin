@@ -5,7 +5,14 @@ import com.substringtechnologies.jpaadmin.boot.config.JpaAdminProperties;
 import com.substringtechnologies.jpaadmin.boot.config.JpaAdminWebMvcConfigurer;
 import com.substringtechnologies.jpaadmin.metadata.JpaMetamodelScanner;
 import com.substringtechnologies.jpaadmin.service.DynamicCrudService;
+import com.substringtechnologies.jpaadmin.storage.FileStorage;
+import com.substringtechnologies.jpaadmin.storage.StorageRegistry;
+import com.substringtechnologies.jpaadmin.storage.UploadService;
+import com.substringtechnologies.jpaadmin.storage.UploadTokens;
 import com.substringtechnologies.jpaadmin.web.AdminApiController;
+import com.substringtechnologies.jpaadmin.web.AdminUploadController;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -28,8 +35,44 @@ public class JpaAdminAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JpaAdminWebMvcConfigurer jpaAdminWebMvcConfigurer(JpaAdminProperties properties) {
-        return new JpaAdminWebMvcConfigurer(properties);
+    public JpaAdminWebMvcConfigurer jpaAdminWebMvcConfigurer(JpaAdminProperties properties, StorageRegistry storages) {
+        return new JpaAdminWebMvcConfigurer(properties, storages);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public StorageRegistry jpaAdminStorageRegistry(JpaAdminProperties properties, ObjectProvider<FileStorage> customStorages) {
+        return new StorageRegistry(properties.getStorage(), properties.getPath() + "/api/uploads/local", customStorages.orderedStream().toList());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public UploadTokens jpaAdminUploadTokens(JpaAdminProperties properties) {
+        return new UploadTokens(properties.getUpload().getSigningKey());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public UploadService jpaAdminUploadService(JpaMetamodelScanner scanner, StorageRegistry storages, UploadTokens tokens) {
+        return new UploadService(scanner, storages, tokens);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AdminUploadController adminUploadController(UploadService uploads) {
+        return new AdminUploadController(uploads);
+    }
+
+    /** Fails startup when an @AdminUpload field names a storage that isn't configured, instead of failing on first upload. */
+    @Bean
+    public SmartInitializingSingleton jpaAdminUploadConfigurationCheck(JpaMetamodelScanner scanner, StorageRegistry storages) {
+        return () -> {
+            var problems = UploadService.misconfiguredFields(scanner, storages);
+            if (!problems.isEmpty()) {
+                throw new IllegalStateException("@AdminUpload fields reference storages that aren't configured: " + String.join("; ", problems)
+                        + ". Configure spring.jpa.admin.storage.<name> (currently configured: " + storages.names() + ")");
+            }
+        };
     }
 
     @Bean

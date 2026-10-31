@@ -7,7 +7,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 export function PageHeader({ title, description, icon, actions }: { title: ReactNode; description?: ReactNode; icon?: ReactNode; actions?: ReactNode }) {
   return <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div className="flex min-w-0 items-start gap-3">
-      {icon && <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground shadow-xs [&_svg]:size-5">{icon}</div>}
+      {icon && <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-card text-muted-foreground shadow-xs [&_svg]:size-5">{icon}</div>}
       <div className="min-w-0">
         <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
         {description && <div className="mt-0.5 text-sm text-muted-foreground">{description}</div>}

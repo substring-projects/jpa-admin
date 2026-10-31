@@ -11,7 +11,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 const INLINE_EDITABLE = ['STRING', 'NUMBER', 'BOOLEAN', 'ENUM', 'DATE', 'DATE_TIME', 'RELATION_MANY_TO_ONE', 'RELATION_ONE_TO_ONE'];
 
 export const canEditInTable = (entity: EntityMetadata, field: FieldMetadata) =>
-  entity.updatable && !entity.readOnly && field.inForm && !isLockedField(field, true) && !field.sensitive
+  entity.updatable && !entity.readOnly && field.inForm && !isLockedField(field, true) && !field.sensitive && !field.upload
   && INLINE_EDITABLE.includes(field.fieldType) && !['RICH_TEXT', 'CODE_EDITOR', 'TEXTAREA', 'PASSWORD'].includes(field.widget);
 
 interface Props {

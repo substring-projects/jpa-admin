@@ -27,6 +27,25 @@ spring:
       security:
         username: ${ADMIN_USERNAME:admin}
         password: ${ADMIN_PASSWORD:admin}
+      # Where @AdminUpload fields store files. Fields without a storage name use "default".
+      storage:
+        default:
+          type: local
+          directory: ./uploads
+          public-path: /uploads
+        # Amazon S3 (add software.amazon.awssdk:s3 to the dependencies):
+        # default:
+        #   type: s3
+        #   bucket: my-bucket
+        #   region: ap-south-1
+        #   access-key: ${AWS_ACCESS_KEY_ID}
+        #   secret-key: ${AWS_SECRET_ACCESS_KEY}
+        # ImageKit:
+        # default:
+        #   type: imagekit
+        #   public-key: ${IMAGEKIT_PUBLIC_KEY}
+        #   private-key: ${IMAGEKIT_PRIVATE_KEY}
+        #   url-endpoint: https://ik.imagekit.io/your_id
 
 logging:
   level:

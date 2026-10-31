@@ -1,6 +1,12 @@
 package com.substringtechnologies.jpaadmin.boot.config;
 
+import com.substringtechnologies.jpaadmin.storage.LocalFileStorage;
+import com.substringtechnologies.jpaadmin.storage.StorageRegistry;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
@@ -15,10 +21,27 @@ public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer {
     private static final String BUILT_BASE = "<base href=\"/admin/\"";
 
     private final JpaAdminProperties properties;
+    private final StorageRegistry storages;
     private volatile Resource indexPage;
 
-    public JpaAdminWebMvcConfigurer(JpaAdminProperties properties) {
+    public JpaAdminWebMvcConfigurer(JpaAdminProperties properties, StorageRegistry storages) {
         this.properties = properties;
+        this.storages = storages;
+    }
+
+    /** Uploaded files are served as inert content: no type sniffing, and any HTML or SVG runs in a sandbox. */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        for (LocalFileStorage local : storages.localStorages()) {
+            registry.addInterceptor(new HandlerInterceptor() {
+                @Override
+                public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+                    response.setHeader("X-Content-Type-Options", "nosniff");
+                    response.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'");
+                    return true;
+                }
+            }).addPathPatterns(local.publicPath() + "/**");
+        }
     }
 
     @Override
@@ -30,6 +53,9 @@ public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        for (LocalFileStorage local : storages.localStorages()) {
+            registry.addResourceHandler(local.publicPath() + "/**").addResourceLocations(local.root().toUri().toString().replaceAll("/?$", "/"));
+        }
         registry.addResourceHandler(properties.getPath() + "/**")
                 .addResourceLocations("classpath:/META-INF/resources/admin/")
                 .resourceChain(true)

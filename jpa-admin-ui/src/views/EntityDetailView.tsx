@@ -11,6 +11,8 @@ import { ErrorState, NotFound, PageHeader } from '@/components/PageStates';
 import { useLayout } from '@/components/layout/AdminLayout';
 import { useEntityMutations } from '@/hooks/use-entity-mutations';
 import { useHotkeys } from '@/hooks/use-hotkeys';
+import { MediaCard, RecordThumbnail, imageValue, isMediaField } from '@/components/RecordMedia';
+import { cn } from '@/lib/utils';
 import { recordLabel, shortId } from '@/lib/format';
 import { rememberRecord } from '@/lib/storage';
 import type { EntityMetadata, InlineMetadata } from '@/types/metadata';
@@ -94,13 +96,17 @@ function EntityDetail({ entity, id }: { entity: EntityMetadata; id: string }) {
   const inlineNames = new Set(entity.inlines.map(i => i.propertyName));
   const detailFields = entity.fields.filter(f => f.inDetail !== false && !inlineNames.has(f.name)
     && f.fieldType !== 'RELATION_ONE_TO_MANY');
+  const mediaFields = detailFields.filter(isMediaField);
+  const infoFields = detailFields.filter(f => !isMediaField(f));
+  const primaryImage = record ? mediaFields.map(f => imageValue(record[f.name])).find(Boolean) ?? null : null;
+  const title = record ? recordLabel(entity, record) : '';
   const longField = (type: string, widget: string) => widget === 'TEXTAREA' || widget === 'RICH_TEXT' || widget === 'CODE_EDITOR' || type === 'EMBEDDED' || type === 'RELATION_MANY_TO_MANY';
   const rawId = record?.[entity.primaryKeyField] ?? id;
 
-  return <div className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
+  return <div className={cn('mx-auto w-full space-y-6 p-4 sm:p-6 lg:p-8', mediaFields.length ? 'max-w-6xl' : 'max-w-5xl')}>
     <PageHeader
-      icon={<EntityIcon entity={entity} />}
-      title={record ? recordLabel(entity, record) : <Skeleton className="h-7 w-56" />}
+      icon={<RecordThumbnail url={primaryImage} fallback={<EntityIcon entity={entity} />} />}
+      title={record ? title : <Skeleton className="h-7 w-56" />}
       description={<span className="inline-flex items-center gap-2">
         <Badge variant="outline" className="font-normal">{entity.displayName}</Badge>
         <span className="group/cell inline-flex items-center gap-1 font-mono text-xs">{shortId(id)}<CopyButton value={id} label="Copy ID" /></span>
@@ -133,17 +139,23 @@ function EntityDetail({ entity, id }: { entity: EntityMetadata; id: string }) {
       </TabsList>
 
       <TabsContent value="details">
-        <Card className="py-0">
-          <CardContent className="px-0">
-            <dl className="grid gap-x-8 gap-y-6 p-6 sm:grid-cols-2">
-              {detailFields.map(field => <div key={field.name} className={longField(field.fieldType, field.widget) ? 'sm:col-span-2' : undefined}>
-                <dt className="text-xs font-medium text-muted-foreground">{field.label}</dt>
-                <dd className="mt-1.5 min-h-5 text-sm">{record ? <CellValue field={field} value={record[field.name]} expanded /> : <Skeleton className="h-5 w-40" />}</dd>
-                {field.description && <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>}
-              </div>)}
-            </dl>
-          </CardContent>
-        </Card>
+        <div className={cn(mediaFields.length && 'grid items-start gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]')}>
+          {mediaFields.length > 0 && <div className="space-y-4 lg:sticky lg:top-20">
+            {record ? mediaFields.map(field => <MediaCard key={field.name} field={field} value={record[field.name]} recordTitle={title}
+                editPath={canEdit && !field.readOnly ? `/${entity.entityName}/${encodeURIComponent(id)}/edit` : undefined} />)
+              : <Skeleton className="aspect-square w-full rounded-xl" />}
+          </div>}
+          <Card className="py-0">
+            <CardContent className="px-0">
+              <dl className="grid gap-x-8 gap-y-6 p-6 sm:grid-cols-2">
+                {infoFields.map(field => <div key={field.name} className={longField(field.fieldType, field.widget) || field.upload ? 'sm:col-span-2' : undefined}>
+                  <dt className="text-xs font-medium text-muted-foreground" title={field.description || undefined}>{field.label}</dt>
+                  <dd className="mt-1.5 min-h-5 text-sm">{record ? <CellValue field={field} value={record[field.name]} expanded /> : <Skeleton className="h-5 w-40" />}</dd>
+                </div>)}
+              </dl>
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
 
       {entity.inlines.map(inline => <TabsContent key={inline.propertyName} value={inline.propertyName}>

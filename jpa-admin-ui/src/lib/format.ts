@@ -133,3 +133,31 @@ export function entityIcon(entity: Pick<EntityMetadata, 'icon' | 'entityName'>):
   if (entity.icon && entity.icon !== 'database') return entity.icon;
   return ICON_HINTS.find(([pattern]) => pattern.test(entity.entityName))?.[1] ?? 'database';
 }
+
+/** Web URLs and same-site paths only; anything else (javascript:, data:) is never linked or rendered. */
+export const isSafeUrl = (url: string) => /^(https?:\/\/|\/(?!\/))/i.test(url.trim());
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+  return `${value >= 10 || Number.isInteger(value) ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+
+export function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 1) return 'less than a second';
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  return `${Math.floor(seconds / 60)}m ${Math.ceil(seconds % 60)}s`;
+}
+
+/** Last path segment of a file URL, decoded, for showing an uploaded file's name. */
+export function fileNameFromUrl(url: string): string {
+  try {
+    const path = new URL(url, window.location.href).pathname;
+    return decodeURIComponent(path.slice(path.lastIndexOf('/') + 1)) || url;
+  } catch {
+    return url;
+  }
+}

@@ -12,6 +12,7 @@ import com.substringtechnologies.jpaadmin.annotations.AdminBadge;
 import com.substringtechnologies.jpaadmin.annotations.AdminComputed;
 import com.substringtechnologies.jpaadmin.annotations.AdminField;
 import com.substringtechnologies.jpaadmin.annotations.AdminLookup;
+import com.substringtechnologies.jpaadmin.annotations.AdminUpload;
 import com.substringtechnologies.jpaadmin.annotations.AdminResource;
 import com.substringtechnologies.jpaadmin.annotations.AdminWidget;
 import com.substringtechnologies.jpaadmin.annotations.BadgeColor;
@@ -49,8 +50,8 @@ public class Product {
     private Long id;
 
     @Column(length = 500)
-    @AdminField(label = "Image", order = 2, description = "Link to the product photo")
-    @AdminWidget(type = WidgetType.IMAGE_URL)
+    @AdminField(label = "Image", order = 2, description = "Shown on the storefront and in search results")
+    @AdminUpload(folder = "products", maxSize = "5MB")
     private String imageUrl;
 
     @Column(nullable = false)
@@ -100,6 +101,11 @@ public class Product {
     @AdminField(label = "Specifications (JSON)", order = 13, inList = false)
     @AdminWidget(type = WidgetType.CODE_EDITOR)
     private String specifications;
+
+    @Column(length = 500)
+    @AdminField(label = "Datasheet", order = 14, inList = false, description = "Technical specifications customers can download")
+    @AdminUpload(folder = "datasheets", accept = "application/pdf", maxSize = "10MB")
+    private String datasheetUrl;
 
     @ManyToMany
     @JoinTable(name = "product_tags", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
@@ -193,6 +199,9 @@ public class Product {
     public void setMarketingCopy(String marketingCopy) { this.marketingCopy = marketingCopy; }
     public String getSpecifications() { return specifications; }
     public void setSpecifications(String specifications) { this.specifications = specifications; }
+
+    public String getDatasheetUrl() { return datasheetUrl; }
+    public void setDatasheetUrl(String datasheetUrl) { this.datasheetUrl = datasheetUrl; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

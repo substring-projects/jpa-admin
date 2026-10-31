@@ -33,6 +33,9 @@ All require an authenticated admin session. Modifying requests also require CSRF
 | `POST`   | `/{entity}/batch-delete`       | JSON ID array, such as `[1, 2]`; returns `{"deleted": 2}`.          |
 | `GET`    | `/{entity}/lookup`             | `q` and `limit`; returns an array of `{ "id": ..., "label": ... }`. |
 | `POST`   | `/{entity}/actions/{actionId}` | JSON ID array; returns `success` and `result`.                      |
+| `POST`   | `/uploads/prepare`             | `{entity, field, fileName, contentType, size}`. Checks the field's `@AdminUpload` rules and returns `{token, method, url, headers, fields, fileField}`: where and how the browser sends the file. |
+| `PUT`    | `/uploads/local/{token}`       | Raw file body for `local` storages. The size limit is enforced while streaming. |
+| `POST`   | `/uploads/complete`            | `{token, providerData}` (ImageKit's `fileId`). Verifies the stored file's size and real content type and returns `{url}`. Rejected files are deleted. |
 
 There is no `PATCH` endpoint. CSV export is done in the browser by paging through `GET /{entity}`. All paths are relative to `{spring.jpa.admin.path}/api` (default `/admin/api`).
 

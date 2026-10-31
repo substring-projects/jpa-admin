@@ -1,6 +1,10 @@
 package com.substringtechnologies.jpaadmin.boot.config;
 
+import com.substringtechnologies.jpaadmin.storage.StorageSettings;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @ConfigurationProperties(prefix = "spring.jpa.admin")
 public class JpaAdminProperties {
@@ -12,6 +16,24 @@ public class JpaAdminProperties {
 
     private final Security security = new Security();
     public Security getSecurity() { return security; }
+
+    /** Named file storages for {@code @AdminUpload} fields; a field without a storage name uses {@code default}. */
+    private Map<String, StorageSettings> storage = new LinkedHashMap<>();
+    public Map<String, StorageSettings> getStorage() { return storage; }
+    public void setStorage(Map<String, StorageSettings> storage) { this.storage = storage; }
+
+    private final Upload upload = new Upload();
+    public Upload getUpload() { return upload; }
+
+    public static class Upload {
+        /**
+         * Secret used to sign upload tickets. Set it when running several instances behind a load balancer;
+         * otherwise a random secret is generated at startup.
+         */
+        private String signingKey = "";
+        public String getSigningKey() { return signingKey; }
+        public void setSigningKey(String signingKey) { this.signingKey = signingKey; }
+    }
 
     public static class Security {
         private String username = "admin";

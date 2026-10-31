@@ -42,6 +42,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - **Descriptive Entity Labels:** Displays human-readable labels derived from entity `toString()` or marked `@AdminField` identifier instead of raw database IDs.
 - **Editable Inline Collections:** `@AdminInline` one-to-many rows (such as order line items) are added, edited and removed inside the parent form and saved in one transaction.
 - **Many-to-Many Multi-Select:** Owning-side `@ManyToMany` fields are edited with a searchable multi-select.
+- **File & Image Uploads:** `@AdminUpload` adds drag-and-drop uploads with previews, live progress (percentage, speed, time left) and cancel. Files go to a local folder, Amazon S3 (or MinIO/R2) or ImageKit, chosen in configuration.
 - **Field-Level Validation:** Bean-validation errors from the server appear next to the exact field, including cells in inline rows.
 
 ### 🛡️ Built-in Enterprise Security & Session Management

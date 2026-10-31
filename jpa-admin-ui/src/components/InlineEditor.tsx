@@ -15,13 +15,14 @@ interface Props {
   errors: Record<string, string>;
   disabled?: boolean;
   onChange: (rows: Row[]) => void;
+  onBusyChange?: (key: string, busy: boolean) => void;
 }
 
 export const blankRow = (fields: FieldMetadata[]): Row =>
   Object.fromEntries(fields.map(f => [f.name, f.fieldType === 'BOOLEAN' ? false : '']));
 
 /** Editable child rows saved together with the parent record. */
-export function InlineEditor({ inline, child, fields, rows, errors, disabled, onChange }: Props) {
+export function InlineEditor({ inline, child, fields, rows, errors, disabled, onChange, onBusyChange }: Props) {
   const pk = child.primaryKeyField;
   const atLimit = inline.limit > 0 && rows.length >= inline.limit;
   const update = (index: number, name: string, value: unknown) =>
@@ -46,7 +47,7 @@ export function InlineEditor({ inline, child, fields, rows, errors, disabled, on
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10 pl-6 text-xs text-muted-foreground">#</TableHead>
-              {fields.map(f => <TableHead key={f.name} className="min-w-40 text-xs font-medium text-muted-foreground">
+              {fields.map(f => <TableHead key={f.name} className={`${f.upload ? 'min-w-72' : 'min-w-40'} text-xs font-medium text-muted-foreground`}>
                 {f.label}{f.validation?.required && <span className="text-destructive" aria-hidden> *</span>}
               </TableHead>)}
               <TableHead className="w-12 pr-6"><span className="sr-only">Remove</span></TableHead>
@@ -63,6 +64,7 @@ export function InlineEditor({ inline, child, fields, rows, errors, disabled, on
                   const id = `field-${path}`;
                   return <TableCell key={field.name} className="whitespace-normal">
                     <FieldInput compact field={field} id={id} value={row[field.name]} onChange={v => update(index, field.name, v)}
+                      entity={child.entityName} onBusyChange={busy => onBusyChange?.(path, busy)}
                       invalid={!!errors[path]} disabled={disabled} describedBy={errors[path] ? `${id}-error` : undefined} />
                     {errors[path] && <p id={`${id}-error`} className="mt-1 text-xs text-destructive">{errors[path]}</p>}
                   </TableCell>;

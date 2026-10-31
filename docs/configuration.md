@@ -133,4 +133,50 @@ All properties below use the `spring.jpa.admin.` prefix. Defaults come from [Jpa
 | `primary-color` | Empty | Brand accent as a `#rrggbb` hex value (for example `#2563eb`). Other formats are ignored and the built-in theme is used. |
 | `export-enabled` | `true` | Shows the **Export** button on entity tables, which downloads the current search/filter results (up to 50,000 rows) as CSV. |
 
+| `storage.<name>.*` | none | Named file storages for `@AdminUpload`. See [File storage](#file-storage). |
+| `upload.signing-key` | random | Secret that signs upload tickets. Set it when several instances serve the admin behind a load balancer. |
+
 Changing credentials requires restarting the application. `security.enabled`, `security.roles`, entity include/exclude patterns, and `default-page-size` from the PRD are not implemented configuration options.
+
+
+## File storage
+
+`@AdminUpload` fields store files in named storages. A field that doesn't name one uses `default`, so most applications configure only that. Switching provider is a configuration change; entity code stays the same.
+
+```yaml
+spring:
+  jpa:
+    admin:
+      storage:
+        default:                 # used by @AdminUpload fields without a storage name
+          type: s3
+          bucket: shop-images
+          region: ap-south-1
+          access-key: ${AWS_ACCESS_KEY_ID}
+          secret-key: ${AWS_SECRET_ACCESS_KEY}
+        avatars:                 # @AdminUpload(storage = "avatars")
+          type: imagekit
+          public-key: ${IMAGEKIT_PUBLIC_KEY}
+          private-key: ${IMAGEKIT_PRIVATE_KEY}
+          url-endpoint: https://ik.imagekit.io/your_id
+        invoices:                # @AdminUpload(storage = "invoices", accept = "application/pdf")
+          type: local
+          directory: ./uploads/invoices
+          public-path: /files/invoices
+```
+
+| Type | Properties | How uploads travel |
+| --- | --- | --- |
+| `local` | `directory` (default `./uploads`), `public-path` (default `/uploads`) | Browser → admin API → disk. Files are served from `public-path` with `nosniff` and a sandboxing Content-Security-Policy. |
+| `s3` | `bucket`, `region`, `access-key`, `secret-key`, optional `endpoint` and `path-style` for MinIO / Cloudflare R2 / Spaces | Browser → presigned PUT straight to the bucket. Without keys the default AWS credential chain is used. Requires the `software.amazon.awssdk:s3` dependency. |
+| `imagekit` | `public-key`, `private-key`, `url-endpoint` | Browser → ImageKit's upload API with a short-lived signature; the private key never leaves the server. |
+
+Every type also accepts `public-url`, a CDN or custom domain used for the saved URLs instead of the provider's own.
+
+**S3 CORS.** Because browsers upload directly to the bucket, the bucket needs a CORS rule for the admin's origin:
+
+```json
+[{ "AllowedOrigins": ["https://admin.example.com"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3000 }]
+```
+
+**Custom providers.** Declare a `FileStorage` bean whose `type()` returns a name such as `cloudinary`, and set `type: cloudinary` on a storage.

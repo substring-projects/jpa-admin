@@ -85,6 +85,16 @@ export interface FieldMetadata {
 
   computed?: boolean;
   format?: string;
+
+  upload?: UploadMetadata;
+}
+
+export interface UploadMetadata {
+  storage: string;
+  folder: string;
+  accept: string[];
+  maxSize: number;
+  image: boolean;
 }
 
 export interface InlineMetadata {

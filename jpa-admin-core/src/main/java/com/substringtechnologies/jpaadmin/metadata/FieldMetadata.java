@@ -36,6 +36,7 @@ public class FieldMetadata {
     // Computed / Virtual
     private boolean computed = false;
     private String format = "";
+    private UploadMetadata upload;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -117,4 +118,7 @@ public class FieldMetadata {
 
     public String getFormat() { return format; }
     public void setFormat(String format) { this.format = format; }
+
+    public UploadMetadata getUpload() { return upload; }
+    public void setUpload(UploadMetadata upload) { this.upload = upload; }
 }

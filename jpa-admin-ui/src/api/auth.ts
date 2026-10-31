@@ -39,6 +39,12 @@ export async function logout() {
   session = null;
 }
 
+/** CSRF header for requests the browser sends to the admin API outside adminFetch (for example XHR uploads). */
+export async function csrfHeaders(): Promise<Record<string, string>> {
+  const current = session || await fetchSession();
+  return { [current.csrfHeader]: current.csrfToken };
+}
+
 export async function adminFetch(url: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   if (init.method && !['GET', 'HEAD', 'OPTIONS'].includes(init.method.toUpperCase())) {

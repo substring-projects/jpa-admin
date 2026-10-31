@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-async function failure(res: Response, fallback: string): Promise<ApiError> {
+export async function failure(res: Response, fallback: string): Promise<ApiError> {
   const body = await res.json().catch(() => ({}));
   return new ApiError(body.error || fallback, res.status, body.fieldErrors || {});
 }

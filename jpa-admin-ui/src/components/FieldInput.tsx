@@ -5,6 +5,7 @@ import { humanize } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { RelationSelect } from '@/components/RelationSelect';
 import { RelationMultiSelect, type Ref } from '@/components/RelationMultiSelect';
+import { FileUpload } from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,9 +32,12 @@ interface Props {
   /** Compact controls for table cells; rich editors fall back to plain inputs. */
   compact?: boolean;
   autoFocus?: boolean;
+  /** Entity that owns the field; required for upload fields. */
+  entity?: string;
+  onBusyChange?: (busy: boolean) => void;
 }
 
-export function FieldInput({ field, value, onChange, id, isEdit = false, invalid, disabled, describedBy, compact, autoFocus }: Props) {
+export function FieldInput({ field, value, onChange, id, isEdit = false, invalid, disabled, describedBy, compact, autoFocus, entity, onBusyChange }: Props) {
   const [revealed, setRevealed] = useState(false);
   const common = { id, 'aria-invalid': invalid || undefined, 'aria-describedby': describedBy, disabled, autoFocus };
   const size = compact ? 'h-8 text-sm' : undefined;
@@ -41,6 +45,10 @@ export function FieldInput({ field, value, onChange, id, isEdit = false, invalid
   if (isLockedField(field, isEdit)) {
     const text = value == null ? '' : typeof value === 'object' ? String((value as { label?: unknown }).label ?? '') : String(value);
     return <Input {...common} value={text} readOnly disabled className={cn('font-mono text-xs', size)} />;
+  }
+  if (field.upload && entity) {
+    return <FileUpload id={id} entity={entity} field={field.name} label={field.label} rules={field.upload} value={String(value ?? '')}
+      onChange={onChange} onBusyChange={onBusyChange} invalid={invalid} disabled={disabled} describedBy={describedBy} />;
   }
   if (field.fieldType === 'BOOLEAN' || field.widget === 'BOOLEAN_SWITCH') {
     return <div className={cn('flex items-center gap-3', compact ? 'h-8' : 'h-9')}>

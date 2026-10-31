@@ -167,6 +167,17 @@ public class JpaMetamodelScanner {
             meta.setWidget(adminWidget.type());
         }
 
+        AdminUpload upload = (field != null) ? field.getAnnotation(AdminUpload.class) : null;
+        if (upload != null) {
+            if (field.getType() != String.class) {
+                throw new IllegalStateException("@AdminUpload on " + field.getDeclaringClass().getSimpleName() + "." + field.getName() + " requires a String field that stores the file URL");
+            }
+            meta.setUpload(new UploadMetadata(upload.storage(), upload.folder().replaceAll("^/+|/+$", ""),
+                    List.of(upload.accept()), UploadMetadata.parseSize(upload.maxSize())));
+            meta.setWidget(WidgetType.FILE_UPLOAD);
+            meta.setFilterable(false);
+        }
+
         // Sensitive
         AdminSensitive sensitive = (field != null) ? field.getAnnotation(AdminSensitive.class) : null;
         if (sensitive != null || attr.getName().toLowerCase().contains("password") || attr.getName().toLowerCase().contains("secret")) {

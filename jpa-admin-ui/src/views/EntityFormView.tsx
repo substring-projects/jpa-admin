@@ -91,7 +91,14 @@ function EntityForm({ entity, id, copyFrom }: { entity: EntityMetadata; id?: str
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<Set<string>>(new Set());
   const saved = useRef(false);
+  const trackUpload = (key: string, busy: boolean) => setUploading(prev => {
+    if (prev.has(key) === busy) return prev;
+    const next = new Set(prev);
+    if (busy) next.add(key); else next.delete(key);
+    return next;
+  });
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -148,7 +155,7 @@ function EntityForm({ entity, id, copyFrom }: { entity: EntityMetadata; id?: str
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (saving || loading || loadError) return;
+    if (saving || loading || loadError || uploading.size > 0) return;
     const found: Record<string, string> = {};
     fields.forEach(field => {
       if (isLockedField(field, isEdit)) return;
@@ -220,11 +227,12 @@ function EntityForm({ entity, id, copyFrom }: { entity: EntityMetadata; id?: str
               {fields.map(field => {
                 const inputId = `field-${field.name}`;
                 const error = errors[field.name];
-                return <div key={field.name} className={cn('grid content-start gap-2', (isWideField(field) || field.fieldType === 'RELATION_MANY_TO_MANY') && 'sm:col-span-2')}>
+                return <div key={field.name} className={cn('grid content-start gap-2', (isWideField(field) || field.fieldType === 'RELATION_MANY_TO_MANY' || field.upload) && 'sm:col-span-2')}>
                   <Label htmlFor={inputId} className={cn(error && 'text-destructive')}>
                     {field.label}{field.validation?.required && !(isEdit && field.sensitive) && <span className="text-destructive" aria-hidden>*</span>}
                   </Label>
                   <FieldInput field={field} id={inputId} value={values[field.name]} onChange={v => setValue(field.name, v)} isEdit={isEdit}
+                    entity={entity.entityName} onBusyChange={busy => trackUpload(field.name, busy)}
                     invalid={!!error} disabled={saving} describedBy={error ? `${inputId}-error` : field.description ? `${inputId}-hint` : undefined} />
                   {error
                     ? <p id={`${inputId}-error`} className="text-xs text-destructive">{error}</p>
@@ -238,7 +246,7 @@ function EntityForm({ entity, id, copyFrom }: { entity: EntityMetadata; id?: str
 
       {!loading && editable.map(({ inline, child, fields: childFields }) => <InlineEditor key={inline.propertyName} inline={inline} child={child}
         fields={childFields} rows={rows[inline.propertyName] ?? []} errors={errors} disabled={saving}
-        onChange={next => setInlineRows(inline.propertyName, next)} />)}
+        onChange={next => setInlineRows(inline.propertyName, next)} onBusyChange={trackUpload} />)}
 
       {readOnlyInlines.length > 0 && isEdit && <p className="text-sm text-muted-foreground">
         Related {readOnlyInlines.map(i => i.title.toLowerCase()).join(', ')} are shown on the <Link to={backTo} className="font-medium text-foreground underline underline-offset-4">record page</Link>.
@@ -247,9 +255,9 @@ function EntityForm({ entity, id, copyFrom }: { entity: EntityMetadata; id?: str
       <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background/95 py-3 backdrop-blur">
         {dirty && <span className="mr-auto flex items-center gap-2 text-sm text-muted-foreground"><span className="size-2 rounded-full bg-amber-500" />Unsaved changes</span>}
         <Button type="button" variant="outline" onClick={cancel} disabled={saving}>Cancel</Button>
-        <Button type="submit" disabled={saving || loading}>
-          {saving && <Loader2 className="animate-spin" />}
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : `Create ${entity.displayName.toLowerCase()}`}
+        <Button type="submit" disabled={saving || loading || uploading.size > 0}>
+          {(saving || uploading.size > 0) && <Loader2 className="animate-spin" />}
+          {uploading.size > 0 ? 'Waiting for upload…' : saving ? 'Saving…' : isEdit ? 'Save changes' : `Create ${entity.displayName.toLowerCase()}`}
         </Button>
       </div>
     </form>

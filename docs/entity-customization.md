@@ -54,6 +54,7 @@ public class Product {
 | `@AdminSensitive`           | Marker annotation                                                                                                                  | Masks non-null API values and hides the field from the list by default. Names containing `password` or `secret` are also detected. |
 | `@AdminLookup`              | `lookupProperty`, `searchProperty`, `quickCreate`                                                                                  | Single-value relations and owning-side `@ManyToMany` collections (multi-select) are supported; some options remain incomplete, as explained below. |
 | `@AdminInline`              | `type`, `title`, `canAdd`, `canDelete`, `limit`                                                                                    | `@OneToMany(mappedBy = ...)` collections are edited as rows inside the parent form and saved with it. Many-to-many inlines are read-only. |
+| `@AdminUpload`             | `storage`, `folder`, `accept`, `maxSize`                                                                                           | Turns a `String` field into a file upload with drag and drop and live progress. The field stores the file's URL. See [File uploads](#file-uploads). |
 | `@AdminComputed`            | `label`, `order`, `inList`, `inDetail`, `format`                                                                                   | Use conventional `get...` / `is...` getters. Custom formatting is not implemented.                                                 |
 | `@AdminAction`              | `name`, `icon`, `confirmation`, `scope`                                                                                            | Exposes supported entity methods as actions.                                                                                       |
 | `@AdminPermission`          | `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles`                                                                  | Declared API; granular authorization is not implemented.                                                                           |
@@ -104,6 +105,27 @@ private java.util.List<OrderItem> items = new java.util.ArrayList<>();
 ```
 
 The parent's edit form shows these rows as an editable table. Users can change existing rows, add rows when `canAdd` is true, and remove rows when `canDelete` is true. The rows are saved in the same transaction as the parent. Each child is bean-validated, and its errors are shown in the matching cell. The child's back-reference (`order` here) is set automatically and is not shown as a column. `limit` caps the number of rows. Many-to-many inlines stay read-only, because removing a row would delete a shared record.
+
+### File uploads
+
+```java
+@AdminUpload(folder = "products", maxSize = "5MB")                       // images (default accept list)
+private String imageUrl;
+
+@AdminUpload(storage = "documents", accept = "application/pdf", maxSize = "10MB")
+private String datasheetUrl;
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `storage` | `default` | Name of a storage under `spring.jpa.admin.storage` (see [configuration](configuration.md#file-storage)). |
+| `folder` | none | Key prefix inside the storage. Files are saved as `folder/yyyy/MM/<random>-<original-name>.<ext>`. |
+| `accept` | PNG, JPEG, WebP, GIF | Allowed MIME types. `image/*` style wildcards work; SVG is only accepted when `image/svg+xml` is listed explicitly. |
+| `maxSize` | `5MB` | Size limit, such as `500KB`, `10MB` or `1GB`. |
+
+The type and size are checked in the browser, checked again by the server before it issues the upload ticket, and verified after the upload, when the server reads the stored file's first bytes to confirm its real type. A file whose content doesn't match its type (for example HTML renamed to `.png`) is deleted and rejected. Replacing or removing a file only changes the record; the previous file stays in storage.
+
+The application must start with every storage that an `@AdminUpload` field names configured. Otherwise startup fails with a message listing the fields.
 
 ### Many-to-many fields
 
