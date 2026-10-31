@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.E2E_PORT || 8090);
-const jar = '../jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar';
+const jar = '../jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar';
 
 /**
  * End-to-end tests against the packaged sample app (build it first with `./mvnw install`).

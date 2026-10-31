@@ -1,191 +1,137 @@
+---
+template: home.html
+title: Spring Boot JPA Admin
+description: A complete, beautiful admin console for any Spring Boot JPA application.
+hide:
+  - navigation
+  - toc
+---
+
 # Spring Boot JPA Admin
 
-<div class="hero-card not-prose">
-  <div class="hero-title">Spring Boot JPA Admin</div>
-  <p class="text-lg text-slate-600 dark:text-slate-300 mb-6 max-w-2xl leading-relaxed">
-    Instant, production-ready administration UI and dynamic REST management engine for Spring Boot JPA applications. Zero boilerplate, zero frontend setup.
-  </p>
-  
-  <div class="flex flex-wrap items-center gap-3 mb-6">
-    <a href="https://jitpack.io/#substring-projects/jpa-admin" target="_blank" class="no-underline inline-block">
-      <img src="https://img.shields.io/badge/JitPack-v1.0.1-2e7d32?style=flat-square&logo=jitpack" alt="JitPack Release" class="h-6 rounded">
-    </a>
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-      Spring Boot 3.x / 4.x
-    </span>
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
-      Java 17+
-    </span>
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
-      React 19 & Tailwind
-    </span>
-  </div>
+## Everything an admin console needs, out of the box { .jpa-center }
 
-  <div class="flex flex-wrap items-center gap-3">
-    <a href="installation/" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all duration-150 no-underline">
-      🚀 Get Started
-    </a>
-    <a href="https://github.com/substring-projects/jpa-admin" target="_blank" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-150 no-underline">
-      📦 GitHub Repository
-    </a>
-  </div>
+<p class="jpa-section-intro">Your JPA entities become a full console at startup. Annotations fine-tune it when you want more control, and everything else just works.</p>
+
+<div class="grid cards" markdown>
+
+-   :material-table-search: __Tables that scale__
+
+    ---
+
+    Server-side search, sorting and pagination, sticky columns, column and density options, and CSV export. Every view is a shareable URL.
+
+-   :material-filter-variant: __Filters & saved views__
+
+    ---
+
+    Relation pickers, number and date ranges, enum and boolean filters, removable chips, and named views you can return to in one click.
+
+-   :material-pencil-box-outline: __Edit anywhere__
+
+    ---
+
+    Full forms with inline validation, edit-in-place cells, duplicate, bulk actions, and an unsaved-changes guard.
+
+-   :material-source-branch: __Real relationships__
+
+    ---
+
+    Searchable many-to-one pickers, many-to-many multi-selects, and one-to-many child rows edited and saved with their parent.
+
+-   :material-cloud-upload-outline: __File & image uploads__
+
+    ---
+
+    Drag and drop with live progress straight to Amazon S3, ImageKit or a local folder. Every file is verified by its content.
+
+-   :material-shield-lock-outline: __Secure by default__
+
+    ---
+
+    Session login with CSRF protection, server-side validation with field-level errors, signed upload tickets, and sanitized rich text.
+
+-   :material-keyboard-outline: __Keyboard-first__
+
+    ---
+
+    A ++cmd+k++ command palette plus shortcuts to search, create, move between rows and edit, without touching the mouse.
+
+-   :material-palette-outline: __Your brand__
+
+    ---
+
+    Your title, logo and accent color, a custom URL path, and light, dark and system themes. No frontend build required.
+
 </div>
 
----
+## See it in action { .jpa-center }
 
-## Console Preview
+=== "Data table"
 
-=== "Dashboard"
+    ![Products table with status badges, image thumbnails, filters and pagination](assets/images/entity-table.png){ .jpa-screenshot loading=lazy }
 
-    ![JPA Admin Dashboard](assets/images/dashboard.png)
-    *Auto-discovers JPA entities with KPI metrics and registered domain entity cards.*
+=== "Filters"
 
-=== "Entity Table & Filters"
+    ![Filter panel with price range, status and category picker](assets/images/filters.png){ .jpa-screenshot loading=lazy }
 
-    ![Entity Table & Filters](assets/images/entity-table.png)
-    *Full-text search, column sorting, pagination controls, and scalar filters.*
+=== "Record page"
 
-=== "Foreign Key Relations"
+    ![Product detail page with an image panel and formatted fields](assets/images/record-detail.png){ .jpa-screenshot loading=lazy }
 
-    ![Foreign Key Selectbox](assets/images/relation-select.png)
-    *Searchable relation selectbox for `@ManyToOne` / `@OneToOne` using descriptive `toString()` labels.*
+=== "Inline rows"
 
-=== "Batch Actions & Selection"
+    ![Order form with editable order line items](assets/images/inline-rows.png){ .jpa-screenshot loading=lazy }
 
-    ![Batch Selection](assets/images/batch-operations.png)
-    *Multi-record row selection for bulk operations with safe deletion confirmation modals.*
+=== "Uploads"
 
-=== "Authentication & Security"
+    ![Image upload showing a live progress bar with speed and time left](assets/images/upload-progress.png){ .jpa-screenshot loading=lazy }
 
-    ![Login View](assets/images/login.png)
-    *Protected administrator login with CSRF token rotation and secure session management.*
+=== "Command palette"
 
----
+    ![Command palette listing recently viewed records and entities](assets/images/command-palette.png){ .jpa-screenshot loading=lazy }
 
-## Why Spring Boot JPA Admin?
+=== "Dark mode"
 
-<div class="feature-grid not-prose">
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">⚛️ Smooth Single Page Application (SPA)</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Built with <strong>React 19 & Vite</strong>. Seamless client-side navigation without full-page reloads, snappy view transitions, skeleton loaders, and instant UI state updates.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🎨 Modern Tailwind CSS & Radix UI</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Clean enterprise design styled with <strong>Tailwind CSS</strong> and accessible <strong>Radix UI</strong> primitives. Features responsive sidebars, mobile drawer navigation, modals, and toasts.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🌓 Seamless Light & Dark Theme</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Effortless one-click switching between classic Slate Light and deep Onyx Dark modes. Preferences persist across sessions with zero theme flicker.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">⚡ Instant Administration</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Auto-discovers your entities via the JPA Metamodel on startup and generates fully functional CRUD tables, search bars, pagination, and edit forms with zero code.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🔗 Smart Foreign Key Relations</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Handles <code>@ManyToOne</code> and <code>@OneToOne</code> relations with searchable async dropdowns. Automatically calls your entity's <code>toString()</code> for readable labels.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🛡️ Built-in Security & CSRF</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Cookie-backed session authentication, automatic CSRF token validation, role-based entity permissions, and automatic masking of sensitive password fields.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">📦 Zero Runtime Node.js Dependency</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">The modern React 19 UI is pre-compiled and served directly from the Spring Boot starter JAR as static classpath assets. No Node.js or npm required at runtime.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🎨 Declarative Customization</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Fine-tune behavior with lightweight annotations: <code>@AdminResource</code>, <code>@AdminField</code>, <code>@AdminBadge</code>, <code>@AdminAction</code>, and <code>@AdminWidget</code>.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🔍 Dynamic Search, Sort & Filters</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Debounce-accelerated full-text search, multi-column sorting, scalar attribute filters, and customizable page sizes.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🗂️ Batch Operations & Safe Deletions</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Multi-record row selection for bulk operations with safe deletion confirmation modals to prevent accidental data loss.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🔌 Headless REST Management API</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Complete REST management API exposed under <code>/admin/api/**</code> for metadata inspection, schema discovery, and programmatic CRUD integration.</p>
-  </div>
-  <div class="feature-box">
-    <h4 class="text-slate-900 dark:text-white">🧩 Type-Aware Form Controls</h4>
-    <p class="text-sm text-slate-600 dark:text-slate-400 m-0">Automatic form generation with datetime formatters, toggle switches for booleans, enum selects, textareas, and password reveal controls.</p>
-  </div>
-</div>
+    ![Product detail page in dark mode](assets/images/record-detail-dark.png){ .jpa-screenshot loading=lazy }
 
----
+## Up and running in three steps { .jpa-center }
 
-## 30-Second Quickstart
+<div class="jpa-steps" markdown>
 
-### 1. Add Repository & Starter Dependency
+### Add the starter
 
-=== "Maven (pom.xml)"
+Add the starter dependency from Maven Central. See [Installation](installation.md) for Maven, Gradle and local builds.
 
-    ```xml
-    <!-- Mandatory: Add JitPack repository -->
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
+```kotlin title="build.gradle.kts"
+repositories { mavenCentral() }
+dependencies { implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0") }
+```
 
-    <!-- Add the starter -->
-    <dependencies>
-        <dependency>
-            <groupId>com.github.substring-projects.jpa-admin</groupId>
-            <artifactId>jpa-admin-spring-boot-starter</artifactId>
-            <version>v1.0.1</version>
-        </dependency>
-    </dependencies>
-    ```
+### Set an admin password
 
-=== "Gradle (build.gradle)"
-
-    ```groovy
-    repositories {
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-
-    dependencies {
-        implementation 'com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1'
-    }
-    ```
-
-### 2. Configure Credentials
-
-In `application.yml`:
-
-```yaml
+```yaml title="application.yml"
 spring:
   jpa:
     admin:
-      enabled: true
-      path: /admin
       security:
-        enabled: true
         username: admin
-        password: "${ADMIN_PASSWORD:admin123}"
+        password: ${ADMIN_PASSWORD}
 ```
 
-### 3. Open Admin Dashboard
+### Open the console
 
-Run your Spring Boot application and open:
+Start your application and open **`http://localhost:8080/admin/`**. Every JPA entity is already there.
 
-👉 **`http://localhost:8080/admin/`**
+</div>
 
----
+<div class="jpa-cta" markdown>
 
-## Documentation Directory
+## Make it yours
 
-Browse the complete documentation using the topics in the left sidebar:
+Rename labels, group entities, color statuses, add actions and uploads, all with annotations on the entities you already have.
 
-| Category | Topics |
-| :--- | :--- |
-| **Getting Started** | [Installation & JitPack Setup](installation.md) · [Running the Demo App](getting-started.md) · [Configuration Options](configuration.md) |
-| **Guides & Features** | [User Guide](user-guide.md) · [Entity Customization](entity-customization.md) · [Security & Auth](security.md) · [REST API Reference](api-reference.md) |
-| **Operations** | [Deployment Guide](deployment.md) · [Troubleshooting](troubleshooting.md) · [Limitations & Roadmap](limitations.md) |
-| **Developers** | [Architecture](architecture.md) · [Local Development](development.md) · [Release Guide](releasing.md) · [Contributing](../CONTRIBUTING.md) |
+[Customize entities :octicons-arrow-right-16:](entity-customization.md){ .md-button .md-button--primary }
+[Annotation reference](annotations.md){ .md-button }
+
+</div>

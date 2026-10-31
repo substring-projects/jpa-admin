@@ -1,44 +1,53 @@
-# Feature status and limitations
+# Limitations & roadmap
 
-[Documentation index](README.md) · [Project overview](../README.md)
+<p class="jpa-lead">An honest list of what the console does not do yet, so you can decide before you depend on it.</p>
 
-Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
+## Access control
 
-## Features and status
+- **One admin account** configured in properties. There are no user accounts, password resets or SSO integration.
+- **`@AdminPermission` isn't enforced.** Everyone who signs in can read and change every entity the console exposes (within each entity's `readOnly`, `creatable`, `updatable` and `deletable` flags).
+- **No audit log** of who changed what.
+- **No rate limiting** or lockout on login.
 
-| Area             | Current behavior                                                                                                        |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Entity discovery | Inspects the JPA metamodel and generates entity, field, relationship, and action metadata.                              |
-| CRUD             | Lists, creates, updates, and deletes records; supports batch deletion.                                                  |
-| Tables           | Server-side pagination, sorting, text search, and exact-value scalar filters.                                           |
-| Forms            | Metadata-driven inputs, enum selects, boolean switches, date/time inputs, textareas, and common validation attributes.  |
-| Relationships    | Searchable selectors for many-to-one and one-to-one references. Annotated child collections are displayed read-only.    |
-| Actions          | Instance methods and static methods accepting a `List`, with row/bulk controls and optional confirmation.               |
-| UI               | React, TypeScript, Tailwind CSS 4, local shadcn-style components, Radix primitives, and Lucide icons.                   |
-| Layout           | Searchable grouped sidebar, desktop collapse, mobile navigation Sheet, light/dark themes, skeletons, and notifications. |
-| Authentication   | Properties-based admin credentials, session login/logout, API authorization, and CSRF protection.                       |
-| Packaging        | Frontend assets embedded in the UI JAR; no Node.js server required at runtime.                                          |
+## Data model
 
-Exports, editable inline collections, granular role permissions, and several advanced widgets remain incomplete. See [known limitations](limitations.md#known-limitations-and-roadmap) before integrating the starter into an application.
+- **Embedded objects** (`@Embedded`) are shown but not editable in forms.
+- **One-to-many collections without `@AdminInline`** aren't shown.
+- **Many-to-many inverse sides** are read-only; record pages list up to 200 linked records.
+- **Composite primary keys** aren't supported; single IDs (`Long`, `Integer`, `UUID`, `String`) are.
+- **Relation pickers** return the first 25 matches, without paging; `@AdminLookup(searchProperty, quickCreate)` aren't used yet.
+- **Multi-value filters** ("status is A or B") and OR conditions aren't available.
 
-## Known limitations and roadmap
+## Uploads
 
-The following are incomplete or not implemented in the current snapshot:
+- One file per field: no galleries or multi-file fields yet.
+- Replacing or removing a file keeps the old file in storage.
+- No built-in image resizing or thumbnails.
+- S3 and ImageKit are covered by automated tests against simulated services. Try them with a test bucket or account before production.
 
-| Area           | Limitation                                                                                                                   |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Authorization  | Per-entity/per-operation role enforcement, action scope enforcement, and comprehensive server-side field write restrictions. |
-| Authentication | Multiple admin accounts, account management, password reset, SSO integration, and login rate limiting.                       |
-| Nested data    | Editable inline children, embedded-object forms, collection editors, and full composite-key support.                         |
-| Relationships  | Quick create, paged lookup results, relation-specific lookup search properties, and robust foreign-key filters.              |
-| Filtering      | Date/numeric ranges and multi-value enum filters.                                                                            |
-| Validation     | Structured field-level server errors and complete parity between frontend validation and Bean Validation.                    |
-| Widgets        | Rich-text editing, code editors, sliders, file uploads, color pickers, and image previews.                                   |
-| Data views     | Record preview drawer, column visibility controls, row density controls, record-count badges, and recent activity.           |
-| Export         | CSV/XLSX endpoints and corresponding UI controls.                                                                            |
-| Configuration  | Custom deployment prefixes/context paths, entity include/exclude configuration, custom logos, and global page-size wiring.   |
-| Extension API  | `JpaAdminConfigurer` and `AdminRegistry` exist but are not invoked by auto-configuration.                                    |
-| IDs/types      | Common single IDs are supported; do not assume every JPA ID, temporal type, or mapping style is covered.                     |
-| Distribution   | JitPack build configuration exists; release availability and published coordinates are not verified by this documentation. Comprehensive CI/browser coverage is not established.         |
+## Annotation options not used yet
 
-See [PROJECT_REQUIREMENTS.md](../PROJECT_REQUIREMENTS.md) for intended behavior and future milestones. Its checklist is a roadmap, not a reliable inventory of completed functionality.
+`@AdminWidget(min, max, step, language, previewSize)`, `WidgetType.SLIDER`, `InlineType.STACKED`, `@AdminComputed(format)`, `@AdminSensitive(mask, maskPattern)`, `@AdminAction(icon)` (a standard icon is shown) and the `page-size` property. The [annotation reference](annotations.md) marks each one.
+
+## Platform
+
+- Built and tested with **Spring Boot 4.0**; Spring Boot 3 is not verified.
+- **Servlet** applications only (no WebFlux).
+- The console `path` can't be the site root (`/`).
+- The **Records created** chart needs a creation timestamp field named like `createdAt` (date or date-time).
+- `JpaAdminConfigurer` and `AdminRegistry` exist in the codebase but aren't called by auto-configuration.
+- English only; no translations yet.
+- Saved views, hidden columns, density, theme and recently viewed records are stored per browser and don't sync.
+- CSV export only (no XLSX), up to 50,000 rows.
+
+## Roadmap
+
+Ideas under consideration, roughly in order:
+
+1. Image galleries and multi-file uploads, with reordering.
+2. Change history for records.
+3. Multiple users with roles, enforcing `@AdminPermission`.
+4. Quick-create from relation pickers, and paged lookups.
+5. Embedded-object editing.
+
+Ideas and feedback are welcome on [GitHub](https://github.com/substring-projects/jpa-admin/issues).

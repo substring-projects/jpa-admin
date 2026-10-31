@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block announce %}
+  <a class="jpa-announce" href="{{ 'file-uploads/' | url }}">
+    <span class="jpa-announce__pill">New</span>
+    Drag-and-drop file &amp; image uploads to Amazon&nbsp;S3, ImageKit or local storage
+    <span aria-hidden="true">&rarr;</span>
+  </a>
+{% endblock %}

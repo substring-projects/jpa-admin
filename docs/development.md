@@ -1,80 +1,67 @@
 # Development
 
-[Documentation index](README.md) · [Project overview](../README.md)
+<p class="jpa-lead">Build, test and change the project locally.</p>
 
-Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
+## Setup
+
+| Tool | Version |
+| --- | --- |
+| JDK | 17+ |
+| Node.js / npm | 20+ |
+| Maven | Wrapper included (`./mvnw`) |
+| Python | 3.12+ for the documentation site (optional) |
+| Google Chrome | For the browser tests (or Playwright's bundled Chromium) |
+
+```bash
+npm ci --prefix jpa-admin-ui
+./mvnw clean install          # builds the UI, runs all Java tests, installs the modules
+```
 
 ## Frontend development
 
-Run the sample backend on port **8080**, then start Vite in a separate terminal:
+Start the sample backend, then Vite with hot reload:
 
 ```bash
-cd jpa-admin-ui
-npm ci
-npm run dev
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar   # terminal 1
+npm run dev --prefix jpa-admin-ui                                                 # terminal 2
 ```
 
-Open **http://localhost:5173/admin/**. Vite proxies `/admin/api` to `http://localhost:8080`, including login requests. Access the UI and its API through the same browser origin so the session cookie and CSRF token stay together.
+Open **<http://localhost:5173/admin/>**. Vite proxies `/admin/api` to port 8080, so sessions and CSRF work. To use another backend port, change the proxy in [`vite.config.ts`](../jpa-admin-ui/vite.config.ts).
 
-If the backend uses another port, update the proxy target in [vite.config.ts](../jpa-admin-ui/vite.config.ts). `npm run preview` previews built assets; it is not a replacement for running the backend and configuring API access.
+- The `@/` import alias points to `src/`.
+- Add shadcn components with `npx shadcn@latest add <name>` (configured in [`components.json`](../jpa-admin-ui/components.json)). Check the generated imports use `@/lib/utils`.
+- Theme tokens live in `src/index.css` (Tailwind CSS 4, oklch colors, light and dark).
+- See [Architecture](architecture.md#in-the-browser) for the source layout.
 
-### UI source map
+## Tests
 
-| Location                              | Purpose                                                     |
-| ------------------------------------- | ----------------------------------------------------------- |
-| `src/views/LoginView.tsx`             | Login form, pending state, and errors.                      |
-| `src/context/AuthContext.tsx`         | Session bootstrap and authentication gate.                  |
-| `src/api/auth.ts`                     | Login/logout, CSRF token handling, and authenticated fetch. |
-| `src/context/AdminContext.tsx`        | Metadata, navigation, theme, and notifications.             |
-| `src/components/Sidebar.tsx`          | Grouped navigation, search, collapse, and account footer.   |
-| `src/views/EntityListView.tsx`        | Tables, filters, pagination, selection, and actions.        |
-| `src/views/EntityFormView.tsx`        | Metadata-driven create/edit forms.                          |
-| `src/components/RelationSelect.tsx`   | Async relation search and selection.                        |
-| `src/components/LoadingSkeletons.tsx` | Dashboard, form, and table loading placeholders.            |
-| `src/components/ui/`                  | Shared local UI primitives.                                 |
-| `src/index.css`                       | Tailwind CSS 4 theme tokens, colors, and animations.        |
-| `src/lib/form-data.ts`                | Writable-field selection and payload construction.          |
+| Command | What it covers |
+| --- | --- |
+| `./mvnw test` | Java tests: security, CRUD features (filters, validation, inline rows, many-to-many, timeline), uploads (local flow, rejections, forged tickets, S3 and ImageKit against simulated servers), and path validation. |
+| `npm test --prefix jpa-admin-ui` | UI unit tests: payload building, formatting, validation. |
+| `npm run test:e2e --prefix jpa-admin-ui` | Playwright browser tests against the packaged sample app: login, URL state, filters, saved views, validation, edit-in-place, inline rows, many-to-many, shortcuts, rich text, uploads (progress, rejection, cancel) and the record media panel. Each test also fails on browser console errors. |
 
-The `@/` alias resolves to `src/`. [components.json](../jpa-admin-ui/components.json) configures the shadcn CLI. Tailwind runs through the Vite plugin; the older `tailwind.config.js` is not the active source of theme tokens. Review generated component changes before replacing customized primitives.
-
-## Build and test
-
-From the repository root:
+The browser tests start the sample JAR on port 8090 using your installed Chrome. Build first with `./mvnw install`. Useful variables:
 
 ```bash
-# Frontend regression tests.
-npm test --prefix jpa-admin-ui
-
-# TypeScript check and production frontend bundle.
-npm run build --prefix jpa-admin-ui
-
-# Java tests across the reactor; also invokes the frontend build.
-./mvnw test
-
-# Package all modules and the runnable sample JAR.
-./mvnw package
-
-# Install artifacts into the local Maven repository.
-./mvnw install
+E2E_CHANNEL=chromium npm run test:e2e --prefix jpa-admin-ui      # Playwright's Chromium (npx playwright install chromium)
+E2E_BASE_URL=http://localhost:8080/backoffice/ npm run test:e2e --prefix jpa-admin-ui   # an already running server
 ```
 
-Focused Maven checks:
+## Useful Maven commands
 
 ```bash
-# Core and authentication module tests.
-./mvnw -pl jpa-admin-spring-boot-autoconfigure -am test
-
-# Build the UI resource JAR.
-./mvnw -pl jpa-admin-ui -am package
+./mvnw -pl jpa-admin-core test                       # one module
+./mvnw -q install -DskipTests -DskipNpmBuild=true    # Java only, reuse the committed UI build
+./mvnw -pl jpa-admin-ui,jpa-admin-sample-app install -DskipTests   # rebuild the UI and the sample JAR
 ```
 
-Current automated coverage includes:
+## Documentation
 
-- Preserving unchanged sensitive values and excluding protected fields from frontend payloads.
-- Preserving `0`, `false`, explicit `null`, and manually assigned create IDs.
-- Excluding unsupported nested fields from scalar forms.
-- Blocking anonymous metadata/record requests.
-- Authenticating with configured credentials and invalidating sessions on logout.
-- Requiring CSRF tokens for login and authenticated writes.
+```bash
+python3 -m venv .venv-docs && .venv-docs/bin/pip install -r requirements-docs.txt
+.venv-docs/bin/mkdocs serve          # http://127.0.0.1:8000/jpa-admin/
+.venv-docs/bin/mkdocs build --strict # what CI runs
+```
 
-These are focused regression tests, not a complete end-to-end or cross-browser test suite. There is no dedicated lint script or CI workflow in this checkout. If Vite reports a large-chunk warning, review the build exit status separately; a warning alone is not a build failure.
+See [Documentation website](publishing-docs.md) for the theme and publishing.

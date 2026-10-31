@@ -1,123 +1,85 @@
-# Installation & JitPack Setup
+# Installation
 
-[Documentation Index](README.md) · [Getting Started](getting-started.md) · [Configuration](configuration.md)
+<p class="jpa-lead">Add the starter to an existing Spring Boot application. The console appears at <code>/admin/</code> on the next start.</p>
 
-<div class="flex flex-wrap items-center gap-3 my-4 not-prose">
-  <a href="https://jitpack.io/#substring-projects/jpa-admin" target="_blank" class="no-underline inline-block">
-    <img src="https://img.shields.io/badge/JitPack-v1.0.1-2e7d32?style=flat-square&logo=jitpack" alt="JitPack Release" class="h-6 rounded">
-  </a>
-  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">Spring Boot 3.x / 4.x</span>
-  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700">Java 17+</span>
-</div>
+## Requirements
 
----
+| | |
+| --- | --- |
+| **Java** | 17 or newer |
+| **Spring Boot** | 4.0 (the version this project is built and tested with). Spring Boot 3 is not verified. |
+| **Application type** | Servlet web application (Spring MVC). WebFlux is not supported. |
+| **Persistence** | Spring Data JPA / Hibernate with your own datasource and entities |
+| **Runtime** | No Node.js needed; the starter includes the UI dependency. |
 
-## 1. Add JitPack Repository & Starter Dependency
+The starter brings Spring Web, Spring Data JPA, Validation and Spring Security.
 
-<div class="tw-alert-danger not-prose my-6">
-  <div class="flex items-start gap-3">
-    <div class="text-2xl leading-none">⚠️</div>
-    <div>
-      <h4 class="font-bold text-red-600 dark:text-red-400 m-0 text-base">MANDATORY STEP: You MUST add the JitPack repository!</h4>
-      <p class="text-sm mt-1.5 mb-2 text-slate-700 dark:text-slate-300 leading-normal">
-        JitPack packages are <strong>NOT</strong> hosted on Maven Central. If you only copy the <code>&lt;dependency&gt;</code> without adding the <code>&lt;repositories&gt;</code> block pointing to <code>https://jitpack.io</code>, your build will <strong>fail immediately</strong> with:
-      </p>
-      <code class="text-xs text-red-600 dark:text-red-400 bg-red-100/60 dark:bg-red-950/70 px-2 py-1.5 rounded block border border-red-200 dark:border-red-900 font-mono">
-        [ERROR] Could not find artifact com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter in central (https://repo.maven.apache.org/maven2)
-      </code>
-    </div>
-  </div>
-</div>
+## 1. Add the dependency
 
-Use the tabs below to copy the complete configuration for your build tool:
+Use the `com.substringtechnologies` coordinates for the `0.1.0` Maven Central release. Maven uses Central by default; Gradle needs `mavenCentral()`.
 
-=== "Maven (pom.xml)"
+!!! note "Publication availability"
+    At the time this guide was prepared, `0.1.0` was being published and the public artifact endpoint was not yet available. If resolution fails, check the [Central listing](https://central.sonatype.com/artifact/com.substringtechnologies/jpa-admin-spring-boot-starter/0.1.0), or use the source-build instructions below. A successful Portal upload alone does not mean the release is publicly downloadable.
 
-    Add **both** the `<repositories>` block and the starter `<dependency>` to your `pom.xml`:
+=== "Maven"
 
-    ```xml
-    <!-- 1. MANDATORY: Add JitPack repository -->
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
-
-    <!-- 2. Add JPA Admin Starter dependency -->
-    <dependencies>
-        <dependency>
-            <groupId>com.github.substring-projects.jpa-admin</groupId>
-            <artifactId>jpa-admin-spring-boot-starter</artifactId>
-            <version>v1.0.1</version>
-        </dependency>
-    </dependencies>
+    ```xml title="pom.xml"
+    <dependency>
+        <groupId>com.substringtechnologies</groupId>
+        <artifactId>jpa-admin-spring-boot-starter</artifactId>
+        <version>0.1.0</version>
+    </dependency>
     ```
 
-    > **Available Versions:**
-    > 
-    > • `v1.0.1` (Recommended stable release)  
-    > • `main-SNAPSHOT` (Bleeding edge build of the main branch)
+=== "Gradle (Kotlin)"
 
-=== "Gradle (Groovy - build.gradle)"
-
-    In your `build.gradle`, include the JitPack repository and the starter dependency:
-
-    ```groovy
-    // 1. MANDATORY: Add JitPack repository
-    repositories {
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-
-    // 2. Add JPA Admin Starter dependency
+    ```kotlin title="build.gradle.kts"
+    repositories { mavenCentral() }
     dependencies {
-        implementation 'com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1'
+        implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0")
     }
     ```
 
-=== "Gradle (Kotlin DSL - build.gradle.kts)"
+=== "Gradle (Groovy)"
 
-    In your `build.gradle.kts`:
-
-    ```kotlin
-    // 1. MANDATORY: Add JitPack repository
-    repositories {
-        mavenCentral()
-        maven("https://jitpack.io")
-    }
-
-    // 2. Add JPA Admin Starter dependency
+    ```groovy title="build.gradle"
+    repositories { mavenCentral() }
     dependencies {
-        implementation("com.github.substring-projects.jpa-admin:jpa-admin-spring-boot-starter:v1.0.1")
+        implementation 'com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0'
     }
     ```
 
-=== "Local Development (1.0.0-SNAPSHOT)"
+=== "Built from source"
 
-    If you are building the library from source on your local machine:
+    Requires JDK 17+, Node.js 20+ and npm. From a checkout whose root POM declares `0.1.0`:
 
     ```bash
     git clone https://github.com/substring-projects/jpa-admin.git
     cd jpa-admin
-    ./mvnw clean install -DskipTests
+    npm ci --prefix jpa-admin-ui
+    ./mvnw clean install
     ```
 
-    Then in your host application:
+    Then use the same Maven dependency above. For Gradle local testing, add `mavenLocal()` before `mavenCentral()`.
+
+The starter downloads core, auto-configuration and UI modules transitively. The UI assets live in the `jpa-admin-ui` JAR; consumers do not build React or install Node.js.
+
+Older JitPack builds used `com.github.substring-projects.jpa-admin`. When migrating, replace the old dependency with the Central coordinates above and remove the JitPack repository if no other dependency needs it. The version sequences differ: `0.1.0` is the first Central release, not a downgrade of the older JitPack tags.
+
+??? tip "Using Amazon S3 for uploads?"
+    Also add the AWS SDK. It's optional, so applications that don't use S3 don't pay for it:
 
     ```xml
     <dependency>
-        <groupId>com.substringtechnologies</groupId>
-        <artifactId>jpa-admin-spring-boot-starter</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>s3</artifactId>
+        <version>2.46.7</version>
     </dependency>
     ```
 
----
+## 2. Set the admin login
 
-## 2. Configure Admin Credentials
-
-Configure authentication in your `application.yml` or `application.properties`:
+The starter refuses to start without a password, so there is no insecure default.
 
 === "application.yml"
 
@@ -125,89 +87,55 @@ Configure authentication in your `application.yml` or `application.properties`:
     spring:
       jpa:
         admin:
-          enabled: true
-          path: /admin
           security:
-            enabled: true
             username: admin
-            password: "${ADMIN_PASSWORD:admin123}"
+            password: ${ADMIN_PASSWORD}   # supply through the environment
     ```
 
 === "application.properties"
 
     ```properties
-    spring.jpa.admin.enabled=true
-    spring.jpa.admin.path=/admin
-    spring.jpa.admin.security.enabled=true
     spring.jpa.admin.security.username=admin
-    spring.jpa.admin.security.password=${ADMIN_PASSWORD:admin123}
+    spring.jpa.admin.security.password=${ADMIN_PASSWORD}
     ```
 
----
+```bash
+export ADMIN_PASSWORD='choose-a-strong-password'
+```
 
-## 3. Ensure Entity Scan Scope
+These credentials are for the admin console only. They are separate from your datasource credentials and from any users in your own application. See [Configuration](configuration.md) for every option.
 
-The starter auto-discovers all JPA entities registered in your Spring `EntityManagerFactory`. No component scan of the starter is needed.
+## 3. Make sure your entities are scanned
 
-Ensure your entity package is in Spring's scan scope:
+The console shows every entity in your `EntityManagerFactory`, so no extra scanning is needed. If your entities live outside the package of your `@SpringBootApplication` class, register them as usual:
 
 ```java
 @SpringBootApplication
-@EntityScan(basePackages = "com.yourcompany.domain") // (if outside root package)
-public class Application {
+@EntityScan("com.example.shop.domain")
+public class ShopApplication {
     public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+        SpringApplication.run(ShopApplication.class, args);
     }
 }
 ```
 
----
-
-## 4. Run & Access Admin UI
-
-Start your Spring Boot application:
+## 4. Open the console
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Open your browser and navigate to:
+Open **`http://localhost:8080/admin/`** and sign in. Every entity is listed in the sidebar, grouped and ready to use.
 
-👉 **`http://localhost:8080/admin/`**
+!!! tip "Next steps"
+    - [Take the tour](user-guide.md) to see everything the console can do.
+    - [Customize entities](entity-customization.md) with labels, groups, badges and actions.
+    - [Add file uploads](file-uploads.md) for images and documents.
 
-Sign in with your credentials (`admin` / `admin123`). You will see all your JPA entities listed with full CRUD, search, and foreign key dropdown support!
+## Troubleshooting dependency resolution
 
----
-
-## 5. JitPack Troubleshooting
-
-<div class="space-y-4 my-4 not-prose">
-  <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
-      <span>❌</span> <span>Error: "Could not find artifact ... in central"</span>
-    </div>
-    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-0 leading-relaxed">
-      <strong>Fix:</strong> You forgot to add the <code>&lt;repositories&gt;</code> block with <code>https://jitpack.io</code>. Add the repository block shown in Step 1 to your <code>pom.xml</code> or <code>build.gradle</code>.
-    </p>
-  </div>
-
-  <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
-      <span>🔄</span> <span>Force Updating / Cache Refresh</span>
-    </div>
-    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-0 leading-relaxed">
-      If a new tag or commit was pushed and your build tool is using a cached version, force an update:<br/>
-      • <strong>Maven:</strong> <code>mvn clean compile -U</code><br/>
-      • <strong>Gradle:</strong> <code>./gradlew build --refresh-dependencies</code>
-    </p>
-  </div>
-
-  <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
-      <span>🌐</span> <span>Live Build Status</span>
-    </div>
-    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-0 leading-relaxed">
-      Visit the <a href="https://jitpack.io/#substring-projects/jpa-admin" target="_blank" class="text-indigo-600 dark:text-indigo-400 underline font-semibold">JitPack jpa-admin dashboard</a> to see live build logs for any tag or commit.
-    </p>
-  </div>
-</div>
+| Problem | Fix |
+| --- | --- |
+| `Could not find artifact … in central` | Check the coordinates and publication status. Once available, run `./mvnw -U compile` to retry a cached failure. |
+| Gradle cannot resolve the starter | Add `mavenCentral()`; use `--refresh-dependencies` after publication. |
+| A local source build works but another machine fails | Local `install` is not publication. Verify Central availability using a fresh local repository (see [Release guide](releasing.md)). |

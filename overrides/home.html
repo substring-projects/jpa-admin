@@ -1,0 +1,61 @@
+{% extends "main.html" %}
+
+{#- Landing page: a hero above the regular Markdown content of docs/README.md. -#}
+
+{% block tabs %}
+  {{ super() }}
+  <section class="jpa-hero">
+    <div class="jpa-hero__glow" aria-hidden="true"></div>
+    <div class="md-grid jpa-hero__inner">
+      <div class="jpa-hero__copy">
+        <a class="jpa-hero__eyebrow" href="{{ 'whats-new/' | url }}">
+          <span class="jpa-dot" aria-hidden="true"></span>
+          What's new: inline editing, saved views, uploads &amp; more
+        </a>
+        <h1 class="jpa-hero__title">
+          The admin panel your <span class="jpa-gradient-text">Spring&nbsp;Boot&nbsp;app</span> is&nbsp;missing
+        </h1>
+        <p class="jpa-hero__lead">
+          Add one dependency and get a polished, secure console for every JPA entity:
+          search, filters, inline editing, relations, uploads and bulk actions,
+          generated from your model. No frontend code, no Node.js at runtime.
+        </p>
+        <div class="jpa-hero__actions">
+          <a href="{{ 'installation/' | url }}" class="md-button md-button--primary jpa-btn">
+            Get started
+            <span class="twemoji">{% include ".icons/octicons/arrow-right-16.svg" %}</span>
+          </a>
+          <a href="{{ 'getting-started/' | url }}" class="md-button jpa-btn jpa-btn--ghost">
+            <span class="twemoji">{% include ".icons/octicons/play-16.svg" %}</span>
+            Run the demo
+          </a>
+        </div>
+        <div class="jpa-hero__install" title="Gradle (Kotlin DSL)">
+          <span class="jpa-hero__install-prompt">$</span>
+          <code>implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0")</code>
+        </div>
+        <ul class="jpa-hero__facts">
+          <li>Java 17+</li>
+          <li>Spring Boot 4</li>
+          <li>React 19 &middot; shadcn/ui</li>
+          <li>Light &amp; dark</li>
+        </ul>
+      </div>
+      <div class="jpa-hero__visual">
+        <div class="jpa-browser">
+          <div class="jpa-browser__bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <div class="jpa-browser__url">localhost:8080/admin</div>
+          </div>
+          <img class="jpa-shot jpa-shot--light" src="{{ 'assets/images/dashboard.png' | url }}" alt="JPA Admin dashboard with record counts, a creation chart and grouped entities" width="1280" height="800">
+          <img class="jpa-shot jpa-shot--dark" src="{{ 'assets/images/dashboard-dark.png' | url }}" alt="JPA Admin dashboard in dark mode" width="1280" height="800">
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{#- The hero already carries the title, so render only the page body. -#}
+{% block content %}
+  <div class="jpa-home">{{ page.content }}</div>
+{% endblock %}

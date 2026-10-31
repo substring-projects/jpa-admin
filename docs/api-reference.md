@@ -1,65 +1,96 @@
-# REST API reference
+# REST API
 
-[Documentation index](README.md) · [Project overview](../README.md)
+<p class="jpa-lead">The console is built entirely on a JSON API that you can also call from scripts and other tools. All paths are relative to <code>{path}/api</code>; with the default path, that's <code>/admin/api</code>.</p>
 
-Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
+## Authentication
 
-Base path: **`/admin/api`**. Entity names come from the metadata response and are looked up case-insensitively.
+The API uses the same session and CSRF protection as the console.
 
-### Authentication endpoints
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/auth/session` | Public. Session state and a CSRF token. |
+| `POST` | `/auth/login` | Public. Form fields `username` and `password`, plus the CSRF header. Returns `204` with a new session cookie, or `401`. |
+| `POST` | `/auth/logout` | Ends the session. Requires the CSRF header. Returns `204`. |
 
-| Method | Path            | Behavior                                                                                                                                |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/auth/session` | Public session status, username when authenticated, configured title, CSRF token, and CSRF header name.                                 |
-| `POST` | `/auth/login`   | Form-encoded `username` and `password`, with CSRF header and session cookie. Returns `204` on success or `401` for invalid credentials. |
-| `POST` | `/auth/logout`  | Requires CSRF verification; invalidates the session and returns `204`.                                                                  |
-
-For a non-browser client, retain cookies from the first session request, send the returned token under the returned `csrfHeader`, and fetch a fresh token after login. The token is tied to the session. Do not send JSON to the login endpoint.
-
-### Entity endpoints
-
-All require an authenticated admin session. Modifying requests also require CSRF verification.
-
-| Method   | Path                           | Request / response                                                  |
-| -------- | ------------------------------ | ------------------------------------------------------------------- |
-| `GET`    | `/metadata`                    | Entity schemas, fields, relationships, and actions.                 |
-| `GET`    | `/stats`                       | `{"counts": {"Product": 5, ...}}`, total records per entity.       |
-| `GET`    | `/stats/timeline?days=30`      | Records created per day (1–365 days) for entities with a creation timestamp such as `createdAt`. |
-| `GET`    | `/{entity}`                    | Paginated records with search, sort, and filters.                   |
-| `GET`    | `/{entity}/{id}`               | One record, including supported inline data.                        |
-| `POST`   | `/{entity}`                    | JSON field map; returns the created record with `201`.              |
-| `PUT`    | `/{entity}/{id}`               | JSON field map; updates supplied fields and returns the record.     |
-| `DELETE` | `/{entity}/{id}`               | Deletes a record; returns `204`.                                    |
-| `POST`   | `/{entity}/batch-delete`       | JSON ID array, such as `[1, 2]`; returns `{"deleted": 2}`.          |
-| `GET`    | `/{entity}/lookup`             | `q` and `limit`; returns an array of `{ "id": ..., "label": ... }`. |
-| `POST`   | `/{entity}/actions/{actionId}` | JSON ID array; returns `success` and `result`.                      |
-| `POST`   | `/uploads/prepare`             | `{entity, field, fileName, contentType, size}`. Checks the field's `@AdminUpload` rules and returns `{token, method, url, headers, fields, fileField}`: where and how the browser sends the file. |
-| `PUT`    | `/uploads/local/{token}`       | Raw file body for `local` storages. The size limit is enforced while streaming. |
-| `POST`   | `/uploads/complete`            | `{token, providerData}` (ImageKit's `fileId`). Verifies the stored file's size and real content type and returns `{url}`. Rejected files are deleted. |
-
-There is no `PATCH` endpoint. CSV export is done in the browser by paging through `GET /{entity}`. All paths are relative to `{spring.jpa.admin.path}/api` (default `/admin/api`).
-
-### Listing example
-
-```http
-GET /admin/api/Product?page=0&size=25&sort=name,asc&q=coffee&status=PUBLISHED&category=1&price__gte=10&createdAt__lte=2026-12-31
+```json title="GET /admin/api/auth/session"
+{
+  "authenticated": false,
+  "username": "",
+  "title": "Acme Back Office",
+  "csrfHeader": "X-CSRF-TOKEN",
+  "csrfToken": "6Y1x…",
+  "logoUrl": "",
+  "primaryColor": "#2563eb",
+  "exportEnabled": true
+}
 ```
 
-| Parameter         | Meaning                                                                                                                       |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `page`            | Zero-based page index; default `0`.                                                                                           |
-| `size`            | Page size; controller default `25`. The UI sends its selected page size.                                                      |
-| `sort`            | One property and direction, for example `name,asc` or `id,desc`.                                                              |
-| `q`               | Case-insensitive substring search across designated text fields. Falls back to eligible text fields when none are designated. |
-| `search`          | Alias used when `q` is absent or blank.                                                                                       |
-| `field=value` | Filter on a `filterable` field. Text matches case-insensitively by substring; enums, booleans and numbers match exactly; single-value relations match the related record's ID; a date-only value on a date-time field matches that whole day. |
-| `field__gte`, `field__lte` | Inclusive range bounds for number, date and date-time fields. A date-only `__lte` on a date-time field covers the end of that day. Invalid values return `400`. |
+??? example "Complete session with curl"
+    ```bash
+    BASE=http://localhost:8080/admin/api
+    JAR=$(mktemp)
 
-Example response shape:
+    # 1. Get a CSRF token (stores the session cookie)
+    TOKEN=$(curl -s -c "$JAR" -b "$JAR" "$BASE/auth/session" | jq -r .csrfToken)
 
-```json
+    # 2. Sign in (the session rotates, so fetch a fresh token afterwards)
+    curl -s -c "$JAR" -b "$JAR" -H "X-CSRF-TOKEN: $TOKEN" \
+         --data-urlencode "username=admin" --data-urlencode "password=$ADMIN_PASSWORD" \
+         "$BASE/auth/login" -o /dev/null -w "%{http_code}\n"     # 204
+    TOKEN=$(curl -s -c "$JAR" -b "$JAR" "$BASE/auth/session" | jq -r .csrfToken)
+
+    # 3. Read and write
+    curl -s -b "$JAR" "$BASE/Product?size=5&sort=price,desc" | jq '.content[].name'
+    curl -s -b "$JAR" -X PUT -H "X-CSRF-TOKEN: $TOKEN" -H "Content-Type: application/json" \
+         -d '{"stockQuantity": 42}' "$BASE/Product/1" | jq .stockQuantity
+    ```
+
+Every endpoint below requires a signed-in session. `POST`, `PUT` and `DELETE` also require the CSRF header.
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/metadata` | Every entity: fields, types, labels, relations, inlines, actions, upload rules and flags. |
+| `GET` | `/stats` | `{"counts": {"Product": 5, …}}`: record count per entity. |
+| `GET` | `/stats/timeline?days=30` | Records created per day (1–365 days) for entities with a creation timestamp. |
+| `GET` | `/{entity}` | A page of records, with search, sort and filters ([below](#listing-records)). |
+| `GET` | `/{entity}/{id}` | One record, including inline rows and many-to-many references. |
+| `POST` | `/{entity}` | Create a record. Returns `201` with the saved record. |
+| `PUT` | `/{entity}/{id}` | Update the fields you send. Returns the saved record. |
+| `DELETE` | `/{entity}/{id}` | Delete a record. Returns `204`. |
+| `POST` | `/{entity}/batch-delete` | JSON array of IDs. Returns `{"deleted": 2}`. |
+| `GET` | `/{entity}/lookup?q=&limit=20` | Options for relation pickers: `[{"id": 1, "label": "Electronics"}]`. |
+| `POST` | `/{entity}/actions/{actionId}` | Run a custom action on a JSON array of IDs. Returns `{"success": true, "result": …}`. |
+| `POST` | `/uploads/prepare` | Start a file upload ([below](#uploads)). |
+| `PUT` | `/uploads/local/{token}` | Send the file body to local storage. |
+| `POST` | `/uploads/complete` | Verify an upload and get its URL. |
+
+`{entity}` is the JPA entity name (usually the class name, such as `Product`). Action IDs come from `/metadata`; don't derive them from the display name.
+
+## Listing records
+
+```http
+GET /admin/api/Product?page=0&size=25&sort=price,desc&q=pro&category=1&price__gte=100&createdAt__lte=2026-12-31
+```
+
+| Parameter | Description |
+| --- | --- |
+| `page` | Zero-based page index. Default `0`. |
+| `size` | Page size. Default `25`. |
+| `sort` | `field,asc` or `field,desc`. Defaults to the entity's `defaultSortBy` / `defaultSortDir`. |
+| `q` (or `search`) | Case-insensitive substring search across searchable text fields. |
+| `field=value` | Filter on a field. **Text:** substring, case-insensitive. **Enum, boolean, number:** exact. **Single relation:** the related record's ID. **Date-only value on a date-time field:** that whole day. |
+| `field__gte`, `field__lte` | Inclusive lower and upper bounds for numbers, dates and date-times. A date-only `__lte` on a date-time field includes the whole day. |
+
+Invalid filter values return `400` with a message such as `Invalid filter value for Price ($): lots`.
+
+```json title="Response"
 {
-  "content": [{ "id": 1, "name": "Coffee", "status": "PUBLISHED" }],
+  "content": [
+    { "id": 2, "name": "MacBook Pro 16\" M3 Max", "price": 3499.00, "status": "PUBLISHED",
+      "category": { "id": 1, "label": "Electronics" }, "createdAt": "2026-10-31T13:54:12.1" }
+  ],
   "totalElements": 1,
   "pageNumber": 0,
   "pageSize": 25,
@@ -67,96 +98,101 @@ Example response shape:
 }
 ```
 
-Actual record fields depend on your entity metadata.
+Relations are returned as `{ "id", "label" }`. Sensitive values are returned as `"••••••••"`.
 
-### Write payloads
+## Write payloads
 
-Example product payload:
-
-```json
+```json title="POST /admin/api/Order"
 {
-  "name": "Coffee",
-  "price": 12.5,
-  "stockQuantity": 10,
-  "status": "DRAFT",
-  "category": { "id": 1 }
+  "orderNumber": "ORD-2026-104",
+  "customer": { "id": 1 },
+  "status": "PENDING",
+  "totalAmount": 1598.99,
+  "items": [
+    { "product": { "id": 1 }, "quantity": 1, "unitPrice": 1199.00 },
+    { "product": { "id": 3 }, "quantity": 1, "unitPrice": 399.99 }
+  ]
 }
 ```
 
-Use JSON with `Content-Type: application/json`. A single-value relation accepts an ID or an object containing `id`; a many-to-many field on the owning side accepts an array of IDs or `{ "id": ... }` objects and replaces the collection. An editable inline collection (a `@OneToMany(mappedBy = ...)` with `@AdminInline`) accepts an array of child objects: rows with an existing ID are updated, rows without one are created (if `canAdd`), and omitted rows are removed (if `canDelete`). Send `null` to clear an optional field. `PUT` binds supplied fields; omit sensitive fields to preserve them. Do not echo masked password values back to the API.
+| Field type | Send |
+| --- | --- |
+| Scalars | JSON values; numbers may be strings. Dates as `2026-10-31`, date-times as `2026-10-31T14:30:00`. Enums by name. |
+| Single relation | An ID or `{ "id": … }`; `null` clears it. The related record must exist. |
+| Many-to-many (owning side) | An array of IDs or `{ "id": … }` objects; replaces the collection. |
+| Inline collection | An array of child objects. Rows **with** the child's ID are updated, rows **without** one are created (if `canAdd`), and rows you leave out are removed (if `canDelete`). At most `limit` rows. |
+| Sensitive field | Omit it to keep the current value. Never send the mask back. |
 
-The frontend excludes generated IDs, computed/read-only fields, and unsupported nested fields from its payloads. Direct API clients must not assume these UI restrictions are all enforced by the binder.
+`PUT` only changes the fields you send. Primary keys, read-only fields, computed values and creation timestamps are ignored on update. Every create and update runs Bean Validation on the entity and its inline rows before saving, and nothing is saved if anything fails.
 
-### Errors
+## Uploads
 
-| Status | Common meaning                                                                                  |
-| ------ | ----------------------------------------------------------------------------------------------- |
-| `400`  | Invalid filter, unsupported operation, or action failure handled by the entity controller.     |
-| `409`  | A database constraint failed, for example a duplicate value in a unique column.                 |
-| `422`  | Bean validation or value conversion failed. The body includes `fieldErrors`.                    |
-| `401`  | Missing/expired login or invalid credentials.                                                   |
-| `403`  | Missing/invalid CSRF token or insufficient authority.                                           |
-| `404`  | Entity or record not found where the service raises a not-found exception.                      |
-
-Entity-controller errors generally use `{"error": "message"}`. Validation failures add `fieldErrors`, keyed by field path (inline rows use `items[0].quantity`):
-
-```json
-{ "error": "Please correct the highlighted fields", "fieldErrors": { "price": "must be greater than 0", "items[0].quantity": "must be greater than 0" } }
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Admin API
+    participant S as Storage
+    C->>A: POST /uploads/prepare
+    A-->>C: token, method, url, headers, fields
+    C->>S: PUT or multipart POST to url
+    C->>A: POST /uploads/complete {token, providerData}
+    A-->>C: {url}
 ```
 
-Create and update run bean validation before saving and roll back on any error, so a rejected update never changes the stored record. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java) for the exact mappings.
-
-## Complete session example
-
-The following Bash example uses `curl`, `jq`, and the local sample. Start the backend first. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` to the configured account in your shell; do not commit actual credentials.
-
-```bash
-BASE_URL=http://localhost:8080
-ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD to the configured admin password}"
-SESSION_DIR=$(mktemp -d)
-trap 'rm -rf "$SESSION_DIR"' EXIT
-COOKIE_JAR="$SESSION_DIR/cookies"
-
-# Obtain a session cookie and the token needed even for login.
-curl --fail-with-body -sS -c "$COOKIE_JAR" \
-  "$BASE_URL/admin/api/auth/session" > "$SESSION_DIR/session.json"
-CSRF_HEADER=$(jq -r '.csrfHeader' "$SESSION_DIR/session.json")
-CSRF_TOKEN=$(jq -r '.csrfToken' "$SESSION_DIR/session.json")
-
-curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
-  -H "$CSRF_HEADER: $CSRF_TOKEN" \
-  --data-urlencode "username=$ADMIN_USERNAME" \
-  --data-urlencode "password=$ADMIN_PASSWORD" \
-  "$BASE_URL/admin/api/auth/login"
-
-# Authentication rotates the token; fetch the authenticated session again.
-curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
-  "$BASE_URL/admin/api/auth/session" > "$SESSION_DIR/session.json"
-CSRF_HEADER=$(jq -r '.csrfHeader' "$SESSION_DIR/session.json")
-CSRF_TOKEN=$(jq -r '.csrfToken' "$SESSION_DIR/session.json")
-
-curl --fail-with-body -sS -b "$COOKIE_JAR" \
-  "$BASE_URL/admin/api/metadata"
-
-curl --fail-with-body -sS -b "$COOKIE_JAR" \
-  "$BASE_URL/admin/api/Product?page=0&size=25&sort=id,desc"
-
-curl --fail-with-body -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
-  -X POST -H "$CSRF_HEADER: $CSRF_TOKEN" \
-  "$BASE_URL/admin/api/auth/logout"
+```json title="POST /admin/api/uploads/prepare"
+{ "entity": "Product", "field": "imageUrl", "fileName": "front.png", "contentType": "image/png", "size": 482113 }
 ```
 
-Run this example in a dedicated Bash session with `set -e`, or stop manually if any request fails. A login or logout success returns `204` with no response body. For create, update, batch delete, or actions, retain the authenticated cookie and add the refreshed CSRF header plus `Content-Type: application/json`. Execute writes before logout.
+```json title="Response"
+{
+  "token": "eyJzIjoi…",
+  "method": "PUT",
+  "url": "https://acme-uploads.s3.ap-south-1.amazonaws.com/products/2026/10/3f2c1a9e-front.png?X-Amz-…",
+  "headers": { "Content-Type": "image/png" },
+  "fields": {},
+  "fileField": null
+}
+```
 
-## Client behavior and side effects
+- **`PUT`:** send the raw file as the body with exactly these headers. For a same-site URL (local storage), also send the CSRF header.
+- **`POST`:** send `multipart/form-data` with every entry of `fields`, then the file under `fileField` (ImageKit).
 
-- Use `page >= 0` and `size > 0`. No explicit application-level maximum page size is configured; choose conservative page and lookup sizes.
-- Lookup defaults to 20 results; a non-positive limit falls back to 20. There is no lookup pagination envelope.
-- Entity records are dynamic JSON objects. Obtain field names and action IDs from metadata; example IDs and records are not stable across installations.
-- Creating, updating, deleting, and invoking actions can change persistent business data. There is no documented dry-run endpoint or idempotency-key mechanism.
-- Do not automatically retry creates or actions after a timeout: the operation may already have committed. Inspect the resulting state before retrying.
-- Deleting a missing record returns `204`. Batch deletion reports the number of submitted IDs processed, including missing records; it is not a count of rows actually removed.
-- No API version prefix or stable compatibility guarantee is established for this snapshot. Recheck integration behavior when upgrading.
+Then complete it. For ImageKit, pass the `fileId` from ImageKit's response:
 
-The source of truth is the [controller](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java), [CRUD service](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/service/DynamicCrudService.java), and [security configuration](../jpa-admin-spring-boot-autoconfigure/src/main/java/com/substringtechnologies/jpaadmin/boot/config/JpaAdminSecurityConfiguration.java). This reference documents the existing API; it does not introduce a separate generated contract.
+```json title="POST /admin/api/uploads/complete"
+{ "token": "eyJzIjoi…", "providerData": { "fileId": "6721f…" } }
+```
+
+```json title="Response"
+{ "url": "https://cdn.acme.com/products/2026/10/3f2c1a9e-front.png" }
+```
+
+Save the URL on the record with a normal `PUT` or `POST`.
+
+## Errors
+
+Errors use `{"error": "message"}`, plus `fieldErrors` for validation:
+
+```json title="422 Unprocessable Entity"
+{
+  "error": "Please correct the highlighted fields",
+  "fieldErrors": {
+    "price": "must be greater than 0",
+    "items[0].quantity": "must be greater than 0",
+    "customer": "The selected record no longer exists"
+  }
+}
+```
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Invalid filter or request, a disabled operation (for example creating when `creatable = false`), or an action that failed. |
+| `401` | Not signed in, or the session expired. Also wrong credentials on login. |
+| `403` | Missing or stale CSRF token, or a forged upload ticket. |
+| `404` | Unknown entity, record or upload. |
+| `409` | Database constraint violation, such as a duplicate unique value or a record still referenced elsewhere. |
+| `410` | The upload ticket expired (after 30 minutes). |
+| `413` | The file is larger than the field's `maxSize`. |
+| `415` | The file type isn't in the field's `accept` list. |
+| `422` | Validation failed (`fieldErrors`), or uploaded content doesn't match its declared type. |
+| `502` | The file storage couldn't be reached. |

@@ -43,4 +43,4 @@ Update the relevant documentation when changing configuration, annotation semant
 - State any checks that could not run and why.
 - Verify relative documentation links and fenced examples before submitting documentation changes.
 
-There is no project license file in this checkout. The owner must establish contribution and redistribution terms; this guide does not supply those terms.
+This project is licensed under [Apache License 2.0](LICENSE). Review the license before contributing or redistributing the code.

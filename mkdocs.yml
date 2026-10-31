@@ -1,43 +1,66 @@
 site_name: Spring Boot JPA Admin
-site_description: Enterprise-grade auto-generated administration UI and REST API for Spring Boot applications.
+site_description: A complete, beautiful admin console for any Spring Boot JPA application. Add one dependency and manage your data.
+site_author: Substring Technologies
 site_url: https://substring-projects.github.io/jpa-admin/
 repo_url: https://github.com/substring-projects/jpa-admin
 repo_name: substring-projects/jpa-admin
 edit_uri: edit/main/docs/
+copyright: Copyright &copy; Substring Technologies
 strict: true
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
 
 hooks:
   - scripts/docs_hooks.py
 
 theme:
   name: material
+  custom_dir: overrides
   language: en
   font:
     text: Inter
     code: JetBrains Mono
   icon:
-    logo: material/database-cog
+    logo: material/database-cog-outline
     repo: fontawesome/brands/github
+    admonition:
+      note: octicons/info-16
+      tip: octicons/light-bulb-16
+      warning: octicons/alert-16
+      danger: octicons/shield-x-16
+      example: octicons/beaker-16
+  favicon: assets/favicon.svg
   palette:
-    # Classic Light Mode
-    - scheme: default
-      primary: slate
-      accent: indigo
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    # Deep Slate / Onyx Dark Mode
-    - scheme: slate
-      primary: slate
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
+        icon: material/brightness-auto
         name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
   features:
-    - navigation.instant
-    - navigation.tracking
+    - announce.dismiss
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
     - navigation.path
     - navigation.top
     - navigation.footer
@@ -47,56 +70,80 @@ theme:
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - content.tooltips
     - toc.follow
 
 extra_css:
   - stylesheets/extra.css
 
-extra_javascript:
-  - https://cdn.tailwindcss.com
-  - javascripts/tailwind-config.js
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/substring-projects/jpa-admin
+      name: Source on GitHub
+    - icon: material/package-variant-closed
+      link: https://central.sonatype.com/artifact/com.substringtechnologies/jpa-admin-spring-boot-starter
+      name: Maven Central
 
 plugins:
   - search
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
   - tables
   - toc:
       permalink: true
+      title: On this page
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.superfences
-  - pymdownx.details
   - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
   - Home: README.md
-  - Getting Started:
-      - Installation & JitPack: installation.md
-      - Run the Sample: getting-started.md
+  - Get started:
+      - Installation: installation.md
+      - Run the sample: getting-started.md
       - Configuration: configuration.md
-  - Guides & Features:
-      - User Guide: user-guide.md
-      - Entity Customization: entity-customization.md
-      - Security & Authentication: security.md
-      - REST API Reference: api-reference.md
-  - Operations & Production:
+      - What's new: whats-new.md
+  - Guides:
+      - Using the console: user-guide.md
+      - Customizing entities: entity-customization.md
+      - File & image uploads: file-uploads.md
+      - Branding & theming: branding.md
+      - Security: security.md
+  - Reference:
+      - Annotations: annotations.md
+      - REST API: api-reference.md
+  - Operations:
       - Deployment: deployment.md
       - Troubleshooting: troubleshooting.md
-      - Limitations & Roadmap: limitations.md
-  - Developers & Community:
+      - Limitations & roadmap: limitations.md
+  - Contributing:
       - Architecture: architecture.md
       - Development: development.md
-      - Release Guide: releasing.md
-      - Documentation Website: publishing-docs.md
-      - Contributing: https://github.com/substring-projects/jpa-admin/blob/main/CONTRIBUTING.md
+      - Release guide: releasing.md
+      - Documentation website: publishing-docs.md
+      - Contributing guide: https://github.com/substring-projects/jpa-admin/blob/main/CONTRIBUTING.md

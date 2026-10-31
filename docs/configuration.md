@@ -1,182 +1,114 @@
 # Configuration
 
-[Documentation index](README.md) · [Project overview](../README.md)
+<p class="jpa-lead">Everything is configured under <code>spring.jpa.admin</code> in <code>application.yml</code> or <code>application.properties</code>. Only the admin password is required.</p>
 
-Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
+## A complete example
 
-### application.yml
-
-Put the admin configuration in your Spring Boot application's
-`src/main/resources/application.yml`. For the included sample, edit
-[jpa-admin-sample-app/src/main/resources/application.yml](../jpa-admin-sample-app/src/main/resources/application.yml).
-
-If your file already has `spring:` and `jpa:` sections, merge the `admin:` block
-into them. Use spaces for YAML indentation and avoid duplicate `spring:` keys.
-Admin login credentials belong under **`spring.jpa.admin.security`**, not under
-`spring.datasource` or `spring.security.user`.
-
-#### Option 1: Set credentials directly for local development
-
-```yaml
-server:
-  port: 8080
-
+```yaml title="application.yml"
 spring:
   jpa:
     admin:
-      enabled: true
-      path: /admin
-      title: "My Admin Console"
+      enabled: true                      # turn the console off entirely with false
+      path: /admin                       # URL of the console; the API lives at {path}/api
+      title: "Acme Back Office"          # login page, sidebar and browser tab
+      logo-url: /images/acme-logo.svg    # optional; falls back to the built-in mark
+      primary-color: "#2563eb"           # optional brand accent (#rrggbb)
+      export-enabled: true               # show the CSV Export button
       security:
-        username: "admin"
-        password: "admin"
+        username: ${ADMIN_USERNAME:admin}
+        password: ${ADMIN_PASSWORD}      # required
+      storage:                           # only needed for @AdminUpload fields
+        default:
+          type: local
+          directory: ./uploads
+          public-path: /uploads
+      upload:
+        signing-key: ${ADMIN_UPLOAD_SIGNING_KEY:}   # set when running several instances
 ```
 
-With this configuration, start the application and open
-**http://localhost:8080/admin/**. Enter **admin** in the Username field and
-**admin** in the Password field.
+## Property reference
 
-To use a different local account, change these two values:
+All properties use the `spring.jpa.admin.` prefix. Defaults come from [`JpaAdminProperties`](../jpa-admin-spring-boot-autoconfigure/src/main/java/com/substringtechnologies/jpaadmin/boot/config/JpaAdminProperties.java).
 
-```yaml
-security:
-  username: "store-admin"
-  password: "local-demo-password"
-```
+### General
 
-This shorter snippet replaces the `security:` block inside `spring.jpa.admin`;
-it is not a top-level configuration block. Restart the application after editing
-credentials, then sign in with the new values. Quote literal passwords so YAML
-characters such as `#`, `:`, or `{` are handled as part of the string.
-The values above are demo credentials; use environment variables for deployment
-secrets instead of committing real passwords.
+| Property | Default | Description |
+| --- | --- | --- |
+| `enabled` | `true` | Enables the console and its API. `false` registers nothing. |
+| `path` | `/admin` | URL prefix of the console. The REST API is served at `{path}/api`. It must start with `/` and have no trailing slash (for example `/backoffice` or `/internal/admin`). The prebuilt UI adapts automatically. |
+| `title` | `Spring Boot JPA Admin` | Name shown on the login page, in the sidebar and in the browser tab. |
+| `logo-url` | *(empty)* | Image shown in the sidebar and on the login page. Absolute URLs and same-site paths both work. A broken image falls back to the built-in mark. |
+| `primary-color` | *(empty)* | Brand accent as a `#rrggbb` hex value. Buttons, links, focus rings, active navigation and the dashboard chart use it, and text on it switches between black and white for contrast. Other formats are ignored. |
+| `export-enabled` | `true` | Shows the **Export** button on tables. Individual entities can opt out with `@AdminResource(exportable = false)`. |
+| `page-size` | `25` | <span class="jpa-pill jpa-pill--no">Not used</span> Bound but not applied. Use `@AdminResource(pageSize = …)` per entity. |
 
-#### Option 2: Read credentials from environment variables
+### Security
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `security.username` | `admin` | Username of the single admin account. |
+| `security.password` | *(empty)* | **Required.** Startup fails while it's blank. The password is hashed with BCrypt in memory at startup. |
+
+See [Security](security.md) for how sign-in, sessions and CSRF work.
+
+### File storage
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `storage.<name>.type` | `local` | `local`, `s3`, `imagekit`, or the `type()` of a custom `FileStorage` bean. |
+| `storage.<name>.public-url` | *(provider URL)* | Base URL saved for uploaded files, for example a CDN or custom domain. |
+| `storage.<name>.directory` | `./uploads` | **local**: folder files are written to. Created at startup. |
+| `storage.<name>.public-path` | `/uploads` | **local**: URL path the folder is served from. |
+| `storage.<name>.bucket` | | **s3**: bucket name (required). |
+| `storage.<name>.region` | `us-east-1` | **s3**: AWS region. |
+| `storage.<name>.access-key` / `secret-key` | | **s3**: static credentials. Leave empty to use the default AWS credential chain (environment, profile, instance role). |
+| `storage.<name>.endpoint` | | **s3**: custom endpoint for MinIO, Cloudflare R2, DigitalOcean Spaces and other S3-compatible services. |
+| `storage.<name>.path-style` | `false` | **s3**: use `endpoint/bucket/key` URLs (usually needed for MinIO). |
+| `storage.<name>.public-key` | | **imagekit**: public API key (required). |
+| `storage.<name>.private-key` | | **imagekit**: private API key (required; never sent to the browser). |
+| `storage.<name>.url-endpoint` | | **imagekit**: your URL endpoint, for example `https://ik.imagekit.io/acme` (required). |
+| `storage.<name>.upload-url` | ImageKit upload API | **imagekit**: override the upload endpoint (rarely needed). |
+| `storage.<name>.api-url` | ImageKit REST API | **imagekit**: override the API endpoint (rarely needed). |
+| `upload.signing-key` | *(random per start)* | Secret that signs upload tickets. Set the same value on every instance behind a load balancer. |
+
+The [File & image uploads](file-uploads.md) guide walks through each provider.
+
+## Credentials from the environment
+
+Never commit real passwords. Read them from environment variables or your platform's secret store:
 
 ```yaml
 spring:
   jpa:
     admin:
-      enabled: true
-      path: /admin
-      title: "Store Admin Console"
       security:
-        username: "${ADMIN_USERNAME:admin}"
-        password: "${ADMIN_PASSWORD}"
+        username: ${ADMIN_USERNAME:admin}   # falls back to "admin"
+        password: ${ADMIN_PASSWORD}         # no fallback: must be provided
 ```
 
-| YAML value                | Meaning                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `${ADMIN_USERNAME:admin}` | Reads `ADMIN_USERNAME`; uses `admin` if the variable is absent.                                    |
-| `${ADMIN_PASSWORD}`       | Reads `ADMIN_PASSWORD` with no fallback. You must provide it before startup.                       |
-| `${ADMIN_PASSWORD:admin}` | Reads `ADMIN_PASSWORD`; falls back to `admin`. The included sample uses this for local demos only. |
+| Expression | Meaning |
+| --- | --- |
+| `${ADMIN_USERNAME:admin}` | Uses `ADMIN_USERNAME`, or `admin` if it's not set. |
+| `${ADMIN_PASSWORD}` | Uses `ADMIN_PASSWORD`; startup fails if it's missing. |
+| `${ADMIN_PASSWORD:admin}` | Falls back to `admin`. Only acceptable for local demos, like the sample app. |
 
-For example, in a local macOS/Linux terminal:
+A `.env` file is not loaded automatically by Spring Boot. Set the variables in your shell, IDE run configuration, container or deployment platform.
 
-```bash
-export ADMIN_USERNAME="store-admin"
-export ADMIN_PASSWORD="local-demo-password"
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar
-```
+!!! note "Admin login ≠ database login"
+    `spring.jpa.admin.security.*` controls who can sign in to the console. `spring.datasource.username/password` connect to your database. They are unrelated and can coexist in the same file.
 
-For that example, sign in with `store-admin` / `local-demo-password`. In an IDE,
-set the same variables in the application's run configuration. In a deployment,
-supply them through the platform's environment or secret configuration. A `.env`
-file alone is not automatically loaded by this backend.
-
-#### Admin credentials versus database credentials
-
-These settings serve different purposes and can coexist in the same YAML file:
-
-```yaml
-spring:
-  datasource:
-    username: "sa" # Database connection user, not the admin login.
-    password: "" # Local H2 database password.
-  jpa:
-    admin:
-      security:
-        username: "${ADMIN_USERNAME:admin}" # Admin UI login user.
-        password: "${ADMIN_PASSWORD}" # Admin UI login password.
-```
-
-Keep your existing datasource URL, driver, and other JPA settings when merging
-this snippet. Setting the database username/password does not change the admin
-UI login. These credentials configure one admin account; they do not create a
-record in your application's customer or user tables.
-
-### application.properties
+## application.properties
 
 ```properties
-spring.jpa.admin.enabled=true
 spring.jpa.admin.path=/admin
-spring.jpa.admin.title=Store Admin Console
+spring.jpa.admin.title=Acme Back Office
+spring.jpa.admin.primary-color=#2563eb
 spring.jpa.admin.security.username=${ADMIN_USERNAME:admin}
 spring.jpa.admin.security.password=${ADMIN_PASSWORD}
+spring.jpa.admin.storage.default.type=local
+spring.jpa.admin.storage.default.directory=./uploads
 ```
 
-The host application must provide `ADMIN_PASSWORD` when using an environment-variable example without a password fallback. Unlike the sample, the starter has **no usable default password** and fails startup when the configured username or password is blank.
+## What isn't configurable yet
 
-### Property reference
-
-All properties below use the `spring.jpa.admin.` prefix. Defaults come from [JpaAdminProperties](../jpa-admin-spring-boot-autoconfigure/src/main/java/com/substringtechnologies/jpaadmin/boot/config/JpaAdminProperties.java).
-
-| Property            | Default                 | Current behavior                                                                                                                                                 |
-| ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`           | `true`                  | Enables the JPA admin auto-configuration. Disabling it does not remove transitive Spring Security dependencies or define the host application's security policy. |
-| `path` | `/admin` | URL prefix for the UI and its API (`{path}/api`). It must start with `/` and have no trailing slash, for example `/backoffice`. The prebuilt UI adapts automatically, so no rebuild is needed. |
-| `title`             | `Spring Boot JPA Admin` | Displayed on login, in the sidebar, and in the browser title.                                                                                                    |
-| `security.username` | `admin`                 | Username for the single configured admin account.                                                                                                                |
-| `security.password` | Empty                   | Required, non-blank password. The sample supplies its own `admin` fallback.                                                                                      |
-| `page-size`         | `25`                    | Bound property, but not wired into entity metadata or the list controller's default. Use `@AdminResource(pageSize = ...)`.                                       |
-| `logo-url` | Empty | Image URL shown in the sidebar and on the login page. Falls back to the default mark if it fails to load. |
-| `primary-color` | Empty | Brand accent as a `#rrggbb` hex value (for example `#2563eb`). Other formats are ignored and the built-in theme is used. |
-| `export-enabled` | `true` | Shows the **Export** button on entity tables, which downloads the current search/filter results (up to 50,000 rows) as CSV. |
-
-| `storage.<name>.*` | none | Named file storages for `@AdminUpload`. See [File storage](#file-storage). |
-| `upload.signing-key` | random | Secret that signs upload tickets. Set it when several instances serve the admin behind a load balancer. |
-
-Changing credentials requires restarting the application. `security.enabled`, `security.roles`, entity include/exclude patterns, and `default-page-size` from the PRD are not implemented configuration options.
-
-
-## File storage
-
-`@AdminUpload` fields store files in named storages. A field that doesn't name one uses `default`, so most applications configure only that. Switching provider is a configuration change; entity code stays the same.
-
-```yaml
-spring:
-  jpa:
-    admin:
-      storage:
-        default:                 # used by @AdminUpload fields without a storage name
-          type: s3
-          bucket: shop-images
-          region: ap-south-1
-          access-key: ${AWS_ACCESS_KEY_ID}
-          secret-key: ${AWS_SECRET_ACCESS_KEY}
-        avatars:                 # @AdminUpload(storage = "avatars")
-          type: imagekit
-          public-key: ${IMAGEKIT_PUBLIC_KEY}
-          private-key: ${IMAGEKIT_PRIVATE_KEY}
-          url-endpoint: https://ik.imagekit.io/your_id
-        invoices:                # @AdminUpload(storage = "invoices", accept = "application/pdf")
-          type: local
-          directory: ./uploads/invoices
-          public-path: /files/invoices
-```
-
-| Type | Properties | How uploads travel |
-| --- | --- | --- |
-| `local` | `directory` (default `./uploads`), `public-path` (default `/uploads`) | Browser → admin API → disk. Files are served from `public-path` with `nosniff` and a sandboxing Content-Security-Policy. |
-| `s3` | `bucket`, `region`, `access-key`, `secret-key`, optional `endpoint` and `path-style` for MinIO / Cloudflare R2 / Spaces | Browser → presigned PUT straight to the bucket. Without keys the default AWS credential chain is used. Requires the `software.amazon.awssdk:s3` dependency. |
-| `imagekit` | `public-key`, `private-key`, `url-endpoint` | Browser → ImageKit's upload API with a short-lived signature; the private key never leaves the server. |
-
-Every type also accepts `public-url`, a CDN or custom domain used for the saved URLs instead of the provider's own.
-
-**S3 CORS.** Because browsers upload directly to the bucket, the bucket needs a CORS rule for the admin's origin:
-
-```json
-[{ "AllowedOrigins": ["https://admin.example.com"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3000 }]
-```
-
-**Custom providers.** Declare a `FileStorage` bean whose `type()` returns a name such as `cloudinary`, and set `type: cloudinary` on a storage.
+These come up often and aren't available as properties: multiple admin accounts or roles, per-entity include/exclude lists, a global default page size, and an "audit log" switch. See [Limitations & roadmap](limitations.md).

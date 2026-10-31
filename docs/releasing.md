@@ -1,35 +1,109 @@
-# Release and documentation publication
+# Release guide
 
-[Documentation index](README.md)
+<p class="jpa-lead">Build, sign and publish the parent POM and four library modules together. The sample application stays in GitHub and is excluded from Central publication.</p>
 
-This is a maintainer procedure, not a record of a published release. The current source version is `1.0.0-SNAPSHOT`.
+The current source version is `0.1.0`. This is the first Maven Central release; older JitPack tags use a separate version sequence. The project uses [Apache License 2.0](../LICENSE).
 
 ## Prepare a release
 
-1. Select the release commit and resolve outstanding changes. Update the parent version and module parent references together when changing the Maven version.
-2. Review the feature status, configuration, API reference, and compatibility statements against that commit. Record significant changes and migration requirements in release notes.
-3. Run the checks below from a clean checkout with the documented toolchain.
-4. Start the packaged sample. Verify login/logout, record browsing, create/update, relations, and intended custom actions on disposable data. Test the starter in a separate consumer application.
-5. Review the packaged UI assets. The JitPack configuration skips the npm build and packages committed `dist` files; regenerate and include them when frontend source changes.
-6. Have the project owner choose and add a project license and establish a private vulnerability-reporting contact. Do not imply a license or security-support commitment that has not been adopted.
-7. Publish the selected release using the project's chosen distribution process. Verify the actual artifact coordinates from a clean consumer environment before adding installation instructions or a release badge.
+1. Select the release commit. Update the root version and all five module parent references together. Keep library versions aligned.
+2. Review configuration, API and compatibility documentation against the release code. Update [What's new](whats-new.md) and installation examples.
+3. Run the checks below. Rebuild and review the tracked `jpa-admin-ui/dist` assets; legacy JitPack builds package them directly.
+4. Run the sample with disposable data. Check login/logout, record browsing, create/update, relations, uploads and custom actions. Test the starter in a separate consumer application.
+5. Keep credentials, private keys and local Maven settings outside Git. Establish a private vulnerability-reporting channel before advertising one.
 
 ```bash
 npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
-./mvnw clean verify
+./mvnw clean install
+npm run test:e2e --prefix jpa-admin-ui
+.venv-docs/bin/mkdocs build --strict
 ```
 
-The Maven lifecycle builds the frontend but does not invoke `npm test`; both commands are required for these checks. The repository does not currently contain a release automation workflow.
+Maven builds the frontend but does not run its unit or browser tests. There is no automatic Maven Central release workflow in this repository.
 
-## Publish documentation with the repository
+## One-time publisher setup
 
-The Markdown files are designed to render directly on GitHub. Include `README.md`, `CONTRIBUTING.md`, and the complete `docs/` directory in the same reviewed commit. Relative links preserve navigation in repository views and release tags.
+- Create a [Central Portal](https://central.sonatype.com/) account and verify ownership of the `com.substringtechnologies` namespace. Account creation and namespace verification are separate steps.
+- Generate a GPG signing key and publish its public key to a supported keyserver. Keep the private key and passphrase local. See [Sonatype's signing guide](https://central.sonatype.org/publish/requirements/gpg/).
+- Generate a Central publishing user token. Put its username and password in `~/.m2/settings.xml` using the exact server ID `central`:
 
-Review the diff, commit the documentation on your chosen branch, and push through your normal repository workflow. No separate documentation server is required. Link users to the documentation index at the relevant release tag so snapshot changes do not silently alter their instructions.
+```xml title="~/.m2/settings.xml (outside the repository)"
+<settings>
+    <servers>
+        <server>
+            <id>central</id>
+            <username>YOUR_TOKEN_USERNAME</username>
+            <password>YOUR_TOKEN_PASSWORD</password>
+        </server>
+    </servers>
+</settings>
+```
 
-The repository includes a MkDocs Material website and GitHub Pages workflow. Follow [documentation website setup](publishing-docs.md) to enable Pages and publish it.
+If the file already exists, merge the server entry into its existing `servers` section. Use token credentials, not your account password or GPG passphrase. On macOS/Linux, restrict file access with `chmod 600 ~/.m2/settings.xml`.
 
-## Release evidence
+## Verify signing without uploading
 
-Record the release tag or commit, Java/Node/Maven versions, test results, packaged sample smoke-test outcome, consumer dependency-resolution result, and exact distribution coordinates in the release notes or release review. Mark unverified combinations explicitly.
+Run from the repository root, where `pom.xml` defines the `release` profile:
+
+```bash
+# macOS/Linux: let GPG prompt in this terminal
+export GPG_TTY=$(tty)
+./mvnw -Prelease verify
+```
+
+The profile attaches source and Javadoc JARs and signs release files. Enter your GPG passphrase in the local prompt. This command does not upload artifacts.
+
+## Upload and publish
+
+```bash
+./mvnw -Prelease deploy
+```
+
+The Central plugin uploads the artifacts for validation. `autoPublish=false` means the maintainer then opens **Central Portal → Publishing → Deployments**, reviews the validated deployment, and clicks **Publish**. Wait for **PUBLISHED**; do not redeploy the same version while it is **PUBLISHING**.
+
+Expected publication:
+
+| Artifact | Packaging |
+| --- | --- |
+| `jpa-admin-parent` | POM |
+| `jpa-admin-core` | JAR |
+| `jpa-admin-ui` | JAR containing compiled UI assets |
+| `jpa-admin-spring-boot-autoconfigure` | JAR |
+| `jpa-admin-spring-boot-starter` | JAR with dependency metadata |
+
+The sample is excluded through `excludeArtifacts`. Verify that it is absent from the Portal deployment. See the [Central Maven plugin guide](https://central.sonatype.org/publish/publish-portal-maven/) for the publishing lifecycle.
+
+Published versions are immutable. For a later fix, choose a new version such as `0.1.1` and update the parent and all module references together.
+
+## Verify public availability
+
+A successful upload or a local `mvn install` does not establish public availability. Check the [public starter POM](https://repo.maven.apache.org/maven2/com/substringtechnologies/jpa-admin-spring-boot-starter/0.1.0/jpa-admin-spring-boot-starter-0.1.0.pom), then resolve the starter and dependencies using an empty cache:
+
+```bash
+# macOS/Linux; run outside the project to avoid its reactor and profiles
+cd /tmp
+release_cache=$(mktemp -d)
+mvn org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get \
+  -Dartifact=com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0 \
+  -Dmaven.repo.local="$release_cache" \
+  -Dtransitive=true
+```
+
+After resolution succeeds, test an independent Spring Boot 4 application, record the results, and remove any pending-publication notice from [Installation](installation.md). Create a release tag only for the reviewed source commit matching the published artifacts.
+
+## Common publishing errors
+
+| Error | Resolution |
+| --- | --- |
+| No POM / profile `release` does not exist | Change into the repository root before running Maven. |
+| Cannot get publisher server properties / `server` is null | Add a server with literal ID `central` in Maven settings. `${server}` is not a substitute unless explicitly resolved. |
+| GPG: `Inappropriate ioctl for device` | Run in your own terminal with `export GPG_TTY=$(tty)` so the passphrase prompt can open. |
+| Unauthorized upload | Check the publishing token and verified namespace in the Portal. |
+| Public artifact is not found | Wait for publication and public availability; retry cached failures with `-U`. |
+
+## Publish documentation
+
+Commit the reviewed documentation, root README, license, theme overrides and MkDocs configuration. Pushing to `main` triggers `.github/workflows/docs.yml`, which builds with strict validation and deploys to GitHub Pages. See [Documentation website](publishing-docs.md) for initial Pages setup.
+
+Record the release commit, toolchain versions, actual test results, sample smoke-test outcome and independent consumer result in release notes. Do not claim unexecuted checks passed.

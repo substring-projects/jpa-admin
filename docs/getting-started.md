@@ -1,64 +1,88 @@
-# Getting started
+# Run the sample
 
-[Documentation index](README.md) · [Project overview](../README.md)
-
-Applies to `1.0.0-SNAPSHOT` (Spring Boot 4.0.0).
+<p class="jpa-lead">The repository includes a demo shop (products, categories, tags, customers and orders) with every feature switched on. It's the fastest way to see the console.</p>
 
 ## Requirements
 
-| Tool     | Requirement                                                                                          |
-| -------- | ---------------------------------------------------------------------------------------------------- |
-| Java     | JDK 17 or newer; the Maven compiler targets Java 17.                                                 |
-| Maven    | Maven Wrapper included (`./mvnw`), pinned to Maven 3.9.9. Use `mvnw.cmd` on Windows.                                     |
-| Node.js  | Node.js 20+ for building the frontend.                                                               |
-| npm      | Required on `PATH` when building the Maven reactor.                                                  |
-| Database | The sample uses H2 in memory. Host applications supply their own JPA datasource and database driver. |
+| Tool | Version |
+| --- | --- |
+| JDK | 17 or newer |
+| Maven | Included as the wrapper (`./mvnw`, or `mvnw.cmd` on Windows) |
+| Node.js & npm | 20 or newer, needed only to build the UI from source |
 
-The current Maven parent is **Spring Boot 4.0.0** and uses its managed Spring Security dependencies. The PRD mentions Spring Boot 3, but this checkout is not a verified Boot 3 compatibility release.
-
-Node.js and npm are build-time requirements only. The current Maven configuration invokes the system `npm`; it does not install Node.js or run `npm ci` automatically.
-
-## Quick start
-
-Run these commands from the repository root:
+## Build and start
 
 ```bash
-# Install the locked frontend dependencies.
-npm ci --prefix jpa-admin-ui
-
-# Run frontend regression tests.
-npm test --prefix jpa-admin-ui
-
-# Compile modules, run Java tests, build the frontend, and package the sample.
-./mvnw clean package
-
-# Start the sample application.
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar
+npm ci --prefix jpa-admin-ui          # install the UI's locked dependencies
+./mvnw clean package                  # build everything and run the Java tests
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar
 ```
 
-Open **http://localhost:8080/admin/**.
+Open **<http://localhost:8080/admin/>** and sign in with **`admin`** / **`admin`**.
 
-The sample credentials are:
+!!! warning "Demo credentials"
+    `admin` / `admin` is a fallback in the sample's `application.yml` for local use only. Override it with environment variables:
+    `ADMIN_USERNAME=store-admin ADMIN_PASSWORD=… java -jar …`
 
-| Field    | Value   |
-| -------- | ------- |
-| Username | `admin` |
-| Password | `admin` |
+## What to try
 
-These defaults are declared in [the sample application.yml](../jpa-admin-sample-app/src/main/resources/application.yml), not in frontend code. Replace them for any deployment beyond a local demo.
+<div class="grid cards" markdown>
 
-To override the sample credentials, set environment variables before starting it:
+-   :material-view-dashboard-outline: __Dashboard__
+
+    ---
+
+    Record counts, the "Records created" chart, and records you recently viewed.
+
+-   :material-filter-variant: __Products__
+
+    ---
+
+    Filter by category or price range, save the view, then edit a stock quantity in place.
+
+-   :material-receipt-text-outline: __Orders__
+
+    ---
+
+    Open an order and edit its line items directly in the order form.
+
+-   :material-image-outline: __Product images__
+
+    ---
+
+    Drag an image onto a product. Files are saved to `./uploads` and served from `/uploads`.
+
+-   :material-tag-multiple-outline: __Tags__
+
+    ---
+
+    Assign several tags to a product with the many-to-many multi-select.
+
+-   :material-keyboard-outline: __Shortcuts__
+
+    ---
+
+    Press ++cmd+k++ (or ++ctrl+k++) for the command palette, or <kbd>?</kbd> for every shortcut.
+
+</div>
+
+## Sample data
+
+The sample uses an in-memory H2 database, seeded on every start with 3 categories, 5 products (images, tags, rich-text copy and a JSON spec on the first), 4 tags, 4 customers and 3 orders with line items. Data resets when the process restarts; uploaded files stay in `./uploads`.
+
+The sample's entities in [`jpa-admin-sample-app/…/domain`](../jpa-admin-sample-app/src/main/java/com/substringtechnologies/jpaadmin/sample/domain) are a good reference for every annotation.
+
+## Useful variations
 
 ```bash
-export ADMIN_USERNAME=store-admin
-# Set ADMIN_PASSWORD through your shell or deployment secret configuration.
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar
+# Another port
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --server.port=8081
+
+# Serve the console from /backoffice instead of /admin
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --spring.jpa.admin.path=/backoffice
+
+# Try your own brand color
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar --spring.jpa.admin.primary-color='#2563eb'
 ```
 
-To use another port:
-
-```bash
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar --server.port=8081
-```
-
-The sample seeds categories, products, customers, orders, and order items. Its H2 database is in memory: data is recreated when the process restarts. Demo datasource credentials are separate from admin login credentials.
+To work on the UI with live reload, see [Development](development.md#frontend-development).

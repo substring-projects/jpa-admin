@@ -8,7 +8,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - 📖 **Documentation:** [https://substring-projects.github.io/jpa-admin/](https://substring-projects.github.io/jpa-admin/)
 - 👤 **Creator Profile:** [Durgesh Tiwari (@durgeshcoder)](https://github.com/durgeshcoder)
 
-**Version:** `1.0.0-SNAPSHOT` · **Java:** 17+ · **Spring Boot:** 4.0.0
+**Version:** `0.1.0` · **Java:** 17+ · **Spring Boot:** 4.0.0
 
 [Documentation](https://substring-projects.github.io/jpa-admin/) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
 
@@ -18,9 +18,9 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 | :---: | :---: |
 | ![Dashboard](docs/assets/images/dashboard.png) | ![Entity Table](docs/assets/images/entity-table.png) |
 
-| Foreign Key Relations (Selectbox) | Bulk Selection & Deletions |
+| Record Detail | Bulk Selection & Deletions |
 | :---: | :---: |
-| ![Foreign Key Selectbox](docs/assets/images/relation-select.png) | ![Batch Operations](docs/assets/images/batch-operations.png) |
+| ![Record detail](docs/assets/images/record-detail.png) | ![Batch Operations](docs/assets/images/bulk-actions.png) |
 
 ## Key Features & Capabilities
 
@@ -64,12 +64,12 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - **Safety Confirmation Modals:** Destructive actions prompt explicit confirmation dialogs to prevent accidental data loss.
 
 ### 📦 Zero Runtime Node.js Dependency
-- **Self-Contained Starter:** Pre-compiled React frontend assets are packaged directly into the Spring Boot starter JAR and served from the classpath at `/admin/`. No Node.js or npm required in production environments!
+- **Self-Contained Starter:** Pre-compiled React frontend assets are packaged in the `jpa-admin-ui` JAR pulled in by the starter and served from the classpath at `/admin/`. No Node.js or npm required in production environments!
 
 ### 🔌 Headless REST Management API
-- **Exposed REST Endpoints:** Complete API exposed under `/admin/api/**` providing metadata introspection (`/admin/api/metadata`, `/admin/api/resources/{resource}/schema`) and CRUD operations for programmatic integration.
+- **Exposed REST Endpoints:** Complete API exposed under `/admin/api/**` providing metadata introspection (`/admin/api/metadata`) and CRUD operations for programmatic integration.
 
-This snapshot is intended for trusted administrators. Granular permissions and comprehensive server-side field restrictions are incomplete. Read [security](docs/security.md) and [feature limitations](docs/limitations.md) before exposing application data. CSV/XLSX export and editable inline collections are not implemented.
+This initial release is intended for trusted administrators. Granular permissions and comprehensive server-side field restrictions are incomplete. Read [security](docs/security.md) and [feature limitations](docs/limitations.md) before exposing application data. CSV export and editable inline collections are supported; XLSX export is not.
 
 ## Run the sample
 
@@ -79,7 +79,7 @@ Prerequisites: JDK 17+, Node.js 20+, and npm on `PATH`. The included Maven Wrapp
 npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
 ./mvnw clean package
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-1.0.0-SNAPSHOT.jar
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.1.0.jar
 ```
 
 On Windows, replace `./mvnw` with `mvnw.cmd`.
@@ -98,7 +98,7 @@ To integrate the starter into your own application, follow [installation](docs/i
 | Contributors | [Architecture](docs/architecture.md), [development](docs/development.md), [contributing](CONTRIBUTING.md) |
 | Maintainers | [Release guide](docs/releasing.md) |
 
-The [requirements document](PROJECT_REQUIREMENTS.md) records product plans; it is not a list of completed features. Published artifact availability is not verified here. No project license file is currently included; licensing terms must be supplied by the owner.
+The [requirements document](PROJECT_REQUIREMENTS.md) records product plans; it is not a list of completed features. See [installation](docs/installation.md) for Central publication status and dependency coordinates. Licensed under [Apache-2.0](LICENSE).
 
 ## Creator
 

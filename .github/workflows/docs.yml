@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'overrides/**'
       - 'requirements-docs.txt'
       - 'scripts/docs_hooks.py'
       - '.github/workflows/docs.yml'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'overrides/**'
       - 'requirements-docs.txt'
       - 'scripts/docs_hooks.py'
       - '.github/workflows/docs.yml'

@@ -1,8 +1,31 @@
 # Documentation website
 
-[Documentation index](README.md)
+<p class="jpa-lead">The site is built with MkDocs Material from the Markdown in <code>docs/</code>, and published to GitHub Pages.</p>
 
-The documentation website uses MkDocs Material. Markdown in `docs/` remains the source of truth. Search, sidebar navigation, code copying, and light/dark themes are included.
+## How the site is put together
+
+| Piece | Purpose |
+| --- | --- |
+| `docs/*.md` | Page content. It also renders on GitHub. |
+| `mkdocs.yml` | Navigation, theme features and Markdown extensions (admonitions, tabs, grid cards, Mermaid, keys). |
+| `overrides/home.html` | The landing-page hero (`template: home.html` in `docs/README.md`). |
+| `overrides/main.html` | The announcement bar shown on every page. |
+| `docs/stylesheets/extra.css` | Brand styling: emerald accent, frosted header, cards, screenshots, steps and status pills. |
+| `docs/assets/images/` | Screenshots of the sample app at 2× resolution, light and dark. |
+| `scripts/docs_hooks.py` | Rewrites links that point outside `docs/` to GitHub source links. |
+
+Useful building blocks for pages:
+
+- `<p class="jpa-lead">…</p>` under the title for an introduction.
+- `{ .jpa-screenshot }` on an image for a framed screenshot.
+- `<div class="grid cards" markdown>` for feature cards with `:material-…:` icons.
+- `<div class="jpa-steps" markdown>` around `###` headings for numbered steps.
+- `<span class="jpa-pill jpa-pill--yes|partial|no">` for status labels.
+- `!!! tip`, `!!! warning`, `??? example` for callouts; `++cmd+k++` for keys; ` ```mermaid ` for diagrams.
+
+## Refresh the screenshots
+
+Take screenshots from a **fresh** sample app (in-memory data, a temporary upload folder) so no personal data ends up on the site. Use a 1280×800 window at 2× scale, capture light and dark, and keep the file names used by the pages.
 
 ## Preview locally
 
@@ -29,7 +52,7 @@ The output is `site/`, which is ignored by Git. No Java build or database is nee
 
 ## Enable GitHub Pages
 
-1. Push the documentation, `mkdocs.yml`, `requirements-docs.txt`, `scripts/docs_hooks.py`, and `.github/workflows/docs.yml` to the repository's `main` branch.
+1. Push the documentation, `overrides/`, `mkdocs.yml`, `requirements-docs.txt`, `scripts/docs_hooks.py`, and `.github/workflows/docs.yml` to the repository's `main` branch.
 2. Open **Settings → Pages → Build and deployment** in the GitHub repository. Set **Source** to **GitHub Actions**. Repository administration permissions may be required.
 3. Open **Actions → Documentation → Run workflow** and select `main`. This also retries publication if the initial push occurred before Pages was enabled.
 4. Wait for the `build` and `deploy` jobs to succeed. Open the URL shown by the `github-pages` environment.
@@ -42,7 +65,7 @@ See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pa
 
 ## Maintain the site
 
-- Add new pages to `nav` in `mkdocs.yml` and link them from the documentation index.
+- Add new pages to `nav` in `mkdocs.yml` and link them from related pages. Anchors (`page.md#section`) can't be used in `nav`.
 - Keep relative links between guides. The build hook converts links outside `docs/` into GitHub repository links, preserving source-code references without copying application files into the website.
 - Run the strict build before submitting changes. Resolve missing-page and invalid-link warnings.
 - Update `site_url`, `repo_url`, navigation URLs, and the workflow branch if you rename or fork the repository. The source-link hook and edit links currently target `main`.
