@@ -1,13 +1,38 @@
 import { adminFetch } from './auth';
 import { EntityMetadata, PageResult } from '../types/metadata';
+import { API_BASE as BASE_URL } from '@/lib/base-path';
 
-// In production, served from same origin under /admin/api
-const BASE_URL = '/admin/api';
+/** A failed request; `fieldErrors` maps field paths such as `price` or `items[0].quantity` to messages. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly fieldErrors: Record<string, string> = {}) {
+    super(message);
+  }
+}
+
+async function failure(res: Response, fallback: string): Promise<ApiError> {
+  const body = await res.json().catch(() => ({}));
+  return new ApiError(body.error || fallback, res.status, body.fieldErrors || {});
+}
+
+export interface Timeline { days: string[]; series: Record<string, number[]> }
+
+export async function fetchTimeline(days = 30): Promise<Timeline> {
+  const res = await adminFetch(`${BASE_URL}/stats/timeline?days=${days}`);
+  if (!res.ok) throw await failure(res, 'Failed to load activity');
+  return res.json();
+}
 
 export async function fetchMetadata(): Promise<EntityMetadata[]> {
   const res = await adminFetch(`${BASE_URL}/metadata`);
   if (!res.ok) throw new Error(`Failed to load metadata: ${res.statusText}`);
   return res.json();
+}
+
+export async function fetchStats(): Promise<Record<string, number>> {
+  const res = await adminFetch(`${BASE_URL}/stats`);
+  if (!res.ok) throw new Error('Failed to load record counts');
+  const data = await res.json();
+  return data.counts || {};
 }
 
 export async function fetchRecords(
@@ -31,13 +56,13 @@ export async function fetchRecords(
   });
 
   const res = await adminFetch(`${BASE_URL}/${encodeURIComponent(entity)}?${params.toString()}`);
-  if (!res.ok) throw new Error(`Failed to load records for ${encodeURIComponent(entity)}`);
+  if (!res.ok) throw await failure(res, `Failed to load records for ${entity}`);
   return res.json();
 }
 
 export async function getRecord(entity: string, id: any): Promise<Record<string, any>> {
   const res = await adminFetch(`${BASE_URL}/${encodeURIComponent(entity)}/${encodeURIComponent(String(id))}`);
-  if (!res.ok) throw new Error(`Failed to load ${encodeURIComponent(entity)} record #${encodeURIComponent(String(id))}`);
+  if (!res.ok) throw await failure(res, `Failed to load ${entity} #${id}`);
   return res.json();
 }
 
@@ -47,10 +72,7 @@ export async function createRecord(entity: string, payload: Record<string, any>)
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.error || `Failed to create ${encodeURIComponent(entity)}`);
-  }
+  if (!res.ok) throw await failure(res, `Failed to create ${entity}`);
   return res.json();
 }
 
@@ -60,10 +82,7 @@ export async function updateRecord(entity: string, id: any, payload: Record<stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.error || `Failed to update ${encodeURIComponent(entity)} #${encodeURIComponent(String(id))}`);
-  }
+  if (!res.ok) throw await failure(res, `Failed to update ${entity} #${id}`);
   return res.json();
 }
 
@@ -71,7 +90,7 @@ export async function deleteRecord(entity: string, id: any): Promise<void> {
   const res = await adminFetch(`${BASE_URL}/${encodeURIComponent(entity)}/${encodeURIComponent(String(id))}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error(`Failed to delete ${encodeURIComponent(entity)} #${encodeURIComponent(String(id))}`);
+  if (!res.ok) throw await failure(res, `Failed to delete ${entity} #${id}`);
 }
 
 export async function batchDeleteRecords(entity: string, ids: any[]): Promise<number> {
@@ -80,7 +99,7 @@ export async function batchDeleteRecords(entity: string, ids: any[]): Promise<nu
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(ids),
   });
-  if (!res.ok) throw new Error(`Batch delete failed`);
+  if (!res.ok) throw await failure(res, 'Batch delete failed');
   const data = await res.json();
   return data.deleted || 0;
 }
@@ -97,9 +116,6 @@ export async function executeAction(entity: string, actionId: string, ids: any[]
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(ids),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Action failed`);
-  }
+  if (!res.ok) throw await failure(res, 'Action failed');
   return res.json();
 }

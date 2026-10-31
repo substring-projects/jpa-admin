@@ -38,6 +38,11 @@ public class JpaAdminProperties {
     private String logoUrl = "";
 
     /**
+     * Brand accent color as a hex value such as "#2563eb". Empty keeps the built-in theme.
+     */
+    private String primaryColor = "";
+
+    /**
      * Default page size for entity tables. Default is 25.
      */
     private int pageSize = 25;
@@ -52,8 +57,9 @@ public class JpaAdminProperties {
 
     public String getPath() { return path; }
     public void setPath(String path) {
-        if (path != null && !path.startsWith("/")) {
-            path = "/" + path;
+        // Request mappings read the raw property, so it must already be in canonical form to match the security rules.
+        if (path == null || !path.matches("(/[A-Za-z0-9._~-]+)+")) {
+            throw new IllegalArgumentException("spring.jpa.admin.path must start with '/', have no trailing slash and not be '/' (got \"" + path + "\")");
         }
         this.path = path;
     }
@@ -63,6 +69,9 @@ public class JpaAdminProperties {
 
     public String getLogoUrl() { return logoUrl; }
     public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
+    public String getPrimaryColor() { return primaryColor; }
+    public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
 
     public int getPageSize() { return pageSize; }
     public void setPageSize(int pageSize) { this.pageSize = pageSize; }

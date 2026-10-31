@@ -9,8 +9,11 @@ Use JDK 17+, Node.js 20+, and npm. From the repository root:
 ```bash
 npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
-./mvnw clean verify
+./mvnw clean install
+npm run test:e2e --prefix jpa-admin-ui   # browser tests against the packaged sample app
 ```
+
+The end-to-end suite starts the sample JAR on port 8090 and uses your installed Chrome. Set `E2E_CHANNEL=chromium` to use Playwright's bundled browser (install it once with `npx playwright install chromium`), or set `E2E_BASE_URL` to test a server that is already running.
 
 Use `mvnw.cmd` on Windows. Run the packaged sample and confirm that login and the affected feature work. For UI development, use the Vite workflow in the development guide.
 

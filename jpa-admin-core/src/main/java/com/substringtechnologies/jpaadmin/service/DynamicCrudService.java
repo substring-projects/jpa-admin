@@ -9,6 +9,10 @@ import com.substringtechnologies.jpaadmin.metadata.FieldType;
 import com.substringtechnologies.jpaadmin.metadata.InlineMetadata;
 import com.substringtechnologies.jpaadmin.metadata.JpaMetamodelScanner;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import jakarta.persistence.criteria.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +44,7 @@ public class DynamicCrudService {
     private final JpaMetamodelScanner scanner;
     private final ObjectMapper objectMapper;
     private final ApplicationContext applicationContext;
+    private Validator validator;
 
     public DynamicCrudService(EntityManager entityManager,
                               JpaMetamodelScanner scanner,
@@ -107,16 +112,109 @@ public class DynamicCrudService {
             throw new UnsupportedOperationException("Creation is disabled for " + metadata.getDisplayName());
         }
 
-        Class<?> entityClass = loadClass(metadata.getJavaClassName());
-        try {
-            Object entity = entityClass.getDeclaredConstructor().newInstance();
-            bindPayload(entity, payload, metadata, false);
-            entityManager.persist(entity);
-            entityManager.flush();
-            return serializeEntity(entity, metadata, true);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create " + metadata.getDisplayName() + ": " + e.getMessage(), e);
+        Object entity = instantiate(loadClass(metadata.getJavaClassName()));
+        Map<String, String> errors = new LinkedHashMap<>();
+        bindPayload(entity, payload, metadata, false, errors, "");
+        InlineChanges changes = bindInlines(entity, payload, metadata, errors);
+        validate(entity, "", errors);
+        if (!errors.isEmpty()) {
+            throw new AdminValidationException(errors);
         }
+        entityManager.persist(entity);
+        changes.apply(entityManager);
+        entityManager.flush();
+        return serializeEntity(entity, metadata, true);
+    }
+
+    private Object instantiate(Class<?> type) {
+        try {
+            var constructor = type.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(type.getSimpleName() + " needs a no-argument constructor", e);
+        }
+    }
+
+    private Validator validator() {
+        if (validator == null) {
+            validator = applicationContext.getBeanProvider(Validator.class)
+                    .getIfAvailable(() -> Validation.buildDefaultValidatorFactory().getValidator());
+        }
+        return validator;
+    }
+
+    private void validate(Object entity, String prefix, Map<String, String> errors) {
+        for (ConstraintViolation<Object> violation : validator().validate(entity)) {
+            errors.putIfAbsent(prefix + violation.getPropertyPath(), violation.getMessage());
+        }
+    }
+
+    /** New and removed inline children, applied once the parent is managed so back-references resolve. */
+    private record InlineChanges(List<Object> added, List<Object> removed) {
+        void apply(EntityManager em) {
+            added.forEach(em::persist);
+            removed.forEach(child -> { if (em.contains(child)) em.remove(child); });
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private InlineChanges bindInlines(Object parent, Map<String, Object> payload, EntityMetadata metadata, Map<String, String> errors) {
+        InlineChanges changes = new InlineChanges(new ArrayList<>(), new ArrayList<>());
+        for (InlineMetadata inline : metadata.getInlines()) {
+            String prop = inline.getPropertyName();
+            // Only parent-owned one-to-many collections can be edited; removing a many-to-many row would delete shared data.
+            if (!(payload.get(prop) instanceof List<?> rows) || inline.getMappedBy() == null || inline.getMappedBy().isEmpty()) continue;
+            EntityMetadata childMeta = scanner.getMetadata(inline.getTargetEntity());
+            if (childMeta == null) continue;
+            if (inline.getLimit() > 0 && rows.size() > inline.getLimit()) {
+                errors.put(prop, "At most " + inline.getLimit() + " rows are allowed");
+                continue;
+            }
+            Collection<Object> collection = (Collection<Object>) getFieldValue(parent, prop);
+            if (collection == null) {
+                collection = new ArrayList<>();
+                setFieldValue(parent, prop, collection);
+            }
+            String childPk = childMeta.getPrimaryKeyField();
+            Map<String, Object> existing = new LinkedHashMap<>();
+            for (Object child : collection) existing.put(String.valueOf(getFieldValue(child, childPk)), child);
+
+            Set<Object> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+            for (int i = 0; i < rows.size(); i++) {
+                if (!(rows.get(i) instanceof Map<?, ?> rawRow)) continue;
+                Map<String, Object> row = new HashMap<>((Map<String, Object>) rawRow);
+                row.remove(inline.getMappedBy());
+                String rowPrefix = prop + "[" + i + "].";
+                Object rowId = row.get(childPk);
+                Object child = rowId == null ? null : existing.get(String.valueOf(rowId));
+                if (child == null) {
+                    if (!inline.isCanAdd()) {
+                        errors.put(prop, "New " + inline.getTitle().toLowerCase() + " cannot be added");
+                        continue;
+                    }
+                    child = instantiate(loadClass(childMeta.getJavaClassName()));
+                    bindPayload(child, row, childMeta, false, errors, rowPrefix);
+                    setFieldValue(child, inline.getMappedBy(), parent);
+                    collection.add(child);
+                    changes.added().add(child);
+                } else {
+                    bindPayload(child, row, childMeta, true, errors, rowPrefix);
+                }
+                kept.add(child);
+                validate(child, rowPrefix, errors);
+            }
+            for (Object child : new ArrayList<>(collection)) {
+                if (kept.contains(child)) continue;
+                if (!inline.isCanDelete()) {
+                    errors.put(prop, inline.getTitle() + " cannot be removed");
+                    continue;
+                }
+                collection.remove(child);
+                changes.removed().add(child);
+            }
+        }
+        return changes;
     }
 
     public Map<String, Object> updateRecord(String entityName, Object rawId, Map<String, Object> payload) {
@@ -133,8 +231,15 @@ public class DynamicCrudService {
             throw new NoSuchElementException(metadata.getDisplayName() + " with ID " + id + " not found");
         }
 
-        bindPayload(entity, payload, metadata, true);
-        entityManager.merge(entity);
+        Map<String, String> errors = new LinkedHashMap<>();
+        bindPayload(entity, payload, metadata, true, errors, "");
+        InlineChanges changes = bindInlines(entity, payload, metadata, errors);
+        validate(entity, "", errors);
+        if (!errors.isEmpty()) {
+            // Throwing rolls back the transaction, so the rejected values on this managed entity never flush.
+            throw new AdminValidationException(errors);
+        }
+        changes.apply(entityManager);
         entityManager.flush();
         return serializeEntity(entity, metadata, true);
     }
@@ -301,20 +406,64 @@ public class DynamicCrudService {
         }
 
         if (filters != null) {
-            filters.forEach((key, val) -> {
-                if (metadata.hasField(key) && val != null && !val.trim().isEmpty()) {
-                    FieldMetadata field = metadata.getField(key);
-                    if (!field.isComputed()) {
-                        Object parsedVal = parseFieldValue(val, field, root.getJavaType());
-                        if (parsedVal != null) {
-                            predicates.add(cb.equal(root.get(key), parsedVal));
-                        }
-                    }
-                }
+            filters.forEach((rawKey, val) -> {
+                Predicate predicate = buildFilter(cb, root, metadata, rawKey, val);
+                if (predicate != null) predicates.add(predicate);
             });
         }
 
         return predicates;
+    }
+
+    /**
+     * Supports {@code field=value} plus {@code field__gte} / {@code field__lte} range bounds on numbers and dates.
+     * Text matches case-insensitively by substring; relations match by the related record's id.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Predicate buildFilter(CriteriaBuilder cb, Root<?> root, EntityMetadata metadata, String rawKey, String val) {
+        if (val == null || val.trim().isEmpty()) return null;
+        String op = rawKey.endsWith("__gte") ? "gte" : rawKey.endsWith("__lte") ? "lte" : "eq";
+        String key = op.equals("eq") ? rawKey : rawKey.substring(0, rawKey.length() - 5);
+        FieldMetadata field = metadata.getField(key);
+        if (field == null || field.isComputed() || field.isSensitive()) return null;
+
+        try {
+            switch (field.getFieldType()) {
+                case RELATION_MANY_TO_ONE, RELATION_ONE_TO_ONE -> {
+                    EntityMetadata relMeta = scanner.getMetadata(field.getLookupTargetEntity());
+                    if (relMeta == null) return null;
+                    return cb.equal(root.get(key).get(relMeta.getPrimaryKeyField()), convertId(val.trim(), relMeta));
+                }
+                case RELATION_ONE_TO_MANY, RELATION_MANY_TO_MANY, EMBEDDED, UNKNOWN -> {
+                    return null;
+                }
+                case STRING -> {
+                    if (!op.equals("eq")) return null;
+                    return cb.like(cb.lower(root.get(key).as(String.class)), "%" + val.trim().toLowerCase() + "%");
+                }
+                default -> {
+                    String value = val.trim();
+                    if (field.getFieldType() == FieldType.DATE_TIME && value.length() == 10) {
+                        // A date-only bound covers the whole day.
+                        value += op.equals("lte") ? "T23:59:59.999999999" : "T00:00:00";
+                        if (op.equals("eq")) {
+                            Path<Comparable> path = root.get(key);
+                            Comparable from = (Comparable) parseFieldValue(val.trim() + "T00:00:00", field, root.getJavaType());
+                            Comparable to = (Comparable) parseFieldValue(val.trim() + "T23:59:59.999999999", field, root.getJavaType());
+                            return cb.between(path, from, to);
+                        }
+                    }
+                    Object parsed = parseFieldValue(value, field, root.getJavaType());
+                    if (parsed == null) return null;
+                    if (op.equals("eq")) return cb.equal(root.get(key), parsed);
+                    if (!(parsed instanceof Comparable comparable)) return null;
+                    Path<Comparable> path = root.get(key);
+                    return op.equals("gte") ? cb.greaterThanOrEqualTo(path, comparable) : cb.lessThanOrEqualTo(path, comparable);
+                }
+            }
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("Invalid filter value for " + field.getLabel() + ": " + val);
+        }
     }
 
     private void applySorting(CriteriaBuilder cb, CriteriaQuery<?> cq, Root<?> root, EntityMetadata metadata, Sort sort) {
@@ -340,6 +489,16 @@ public class DynamicCrudService {
             }
         }
         cq.orderBy(orders);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> countAll() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (EntityMetadata metadata : scanner.getAllMetadata()) {
+            Class<?> entityClass = loadClass(metadata.getJavaClassName());
+            counts.put(metadata.getEntityName(), executeCountQuery(entityClass, metadata, null, Map.of()));
+        }
+        return counts;
     }
 
     private long executeCountQuery(Class<?> entityClass, EntityMetadata metadata, String search, Map<String, String> filters) {
@@ -380,6 +539,11 @@ public class DynamicCrudService {
                 continue;
             }
 
+            if (fieldMeta.getFieldType() == FieldType.RELATION_MANY_TO_MANY && includeInlines
+                    && metadata.getInlines().stream().noneMatch(i -> i.getPropertyName().equals(prop))) {
+                map.put(prop, serializeReferences(getFieldValue(entity, prop), fieldMeta));
+                continue;
+            }
             if (fieldMeta.getFieldType() == FieldType.RELATION_ONE_TO_MANY || fieldMeta.getFieldType() == FieldType.RELATION_MANY_TO_MANY) {
                 continue;
             }
@@ -433,6 +597,71 @@ public class DynamicCrudService {
         return map;
     }
 
+    private static final int MAX_SERIALIZED_REFERENCES = 200;
+
+    private List<Map<String, Object>> serializeReferences(Object value, FieldMetadata fieldMeta) {
+        List<Map<String, Object>> refs = new ArrayList<>();
+        if (!(value instanceof Collection<?> collection)) return refs;
+        EntityMetadata relMeta = scanner.getMetadata(fieldMeta.getLookupTargetEntity());
+        String relPk = relMeta != null ? relMeta.getPrimaryKeyField() : "id";
+        for (Object item : collection) {
+            if (refs.size() >= MAX_SERIALIZED_REFERENCES) break;
+            Object id = getFieldValue(item, relPk);
+            String label = resolveEntityLabel(item, relMeta, null);
+            Map<String, Object> ref = new LinkedHashMap<>();
+            ref.put("id", id);
+            ref.put("label", label != null && !label.isEmpty() ? label : String.valueOf(id));
+            refs.add(ref);
+        }
+        return refs;
+    }
+
+    /**
+     * Daily creation counts for entities with a creation timestamp (createdAt, createdDate, ...), oldest day first.
+     * Entities whose timestamp can't be grouped by the database are left out rather than failing the dashboard.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> creationTimeline(int days) {
+        int span = Math.max(1, Math.min(days, 365));
+        LocalDate start = LocalDate.now().minusDays(span - 1L);
+        List<String> labels = new ArrayList<>();
+        for (int i = 0; i < span; i++) labels.add(start.plusDays(i).toString());
+
+        Map<String, List<Long>> series = new LinkedHashMap<>();
+        for (EntityMetadata metadata : scanner.getAllMetadata()) {
+            FieldMetadata stamp = metadata.getFields().stream()
+                    .filter(f -> !f.isComputed() && isCreationTimestampField(f.getName())
+                            && (f.getFieldType() == FieldType.DATE_TIME || f.getFieldType() == FieldType.DATE))
+                    .findFirst().orElse(null);
+            if (stamp == null) continue;
+            Class<?> entityClass = loadClass(metadata.getJavaClassName());
+            Field field = findDeclaredField(entityClass, stamp.getName());
+            if (field == null) continue;
+            Object since = convertToDateTime(start, field.getType());
+            if (since == null) continue;
+            try {
+                // Names come from the JPA metamodel, never from request input.
+                String hql = "select cast(e." + stamp.getName() + " as LocalDate), count(e) from " + metadata.getEntityName()
+                        + " e where e." + stamp.getName() + " >= :since group by cast(e." + stamp.getName() + " as LocalDate)";
+                List<Object[]> rows = entityManager.createQuery(hql, Object[].class).setParameter("since", since).getResultList();
+                Long[] counts = new Long[span];
+                Arrays.fill(counts, 0L);
+                for (Object[] row : rows) {
+                    LocalDate day = row[0] instanceof LocalDate d ? d : LocalDate.parse(String.valueOf(row[0]).substring(0, 10));
+                    int index = (int) (day.toEpochDay() - start.toEpochDay());
+                    if (index >= 0 && index < span) counts[index] = ((Number) row[1]).longValue();
+                }
+                series.put(metadata.getEntityName(), Arrays.asList(counts));
+            } catch (RuntimeException ignored) {
+                // Some dialects or java.util.Date mappings can't cast to a date; skip that entity.
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("days", labels);
+        result.put("series", series);
+        return result;
+    }
+
     private boolean isCreationTimestampField(String fieldName) {
         if (fieldName == null) return false;
         String normalized = fieldName.toLowerCase().replace("_", "").replace("-", "");
@@ -445,38 +674,73 @@ public class DynamicCrudService {
                 || normalized.equals("createddatetime");
     }
 
-    private void bindPayload(Object entity, Map<String, Object> payload, EntityMetadata metadata, boolean isUpdate) {
+    private void bindPayload(Object entity, Map<String, Object> payload, EntityMetadata metadata, boolean isUpdate,
+                             Map<String, String> errors, String prefix) {
         for (FieldMetadata fieldMeta : metadata.getFields()) {
             String prop = fieldMeta.getName();
-            if (fieldMeta.isPrimaryKey() && fieldMeta.isGeneratedValue()) continue;
+            if (fieldMeta.isPrimaryKey() && (fieldMeta.isGeneratedValue() || isUpdate)) continue;
             if (fieldMeta.isComputed() || !payload.containsKey(prop)) continue;
             // On update, skip read-only and creation timestamp fields (like createdAt)
             if (isUpdate && (fieldMeta.isReadOnly() || isCreationTimestampField(prop))) continue;
+            if (fieldMeta.getFieldType() == FieldType.RELATION_ONE_TO_MANY) continue;
 
             Object rawVal = payload.get(prop);
-
-            // Handle Foreign Keys
-            if (fieldMeta.getFieldType() == FieldType.RELATION_MANY_TO_ONE || fieldMeta.getFieldType() == FieldType.RELATION_ONE_TO_ONE) {
-                if (rawVal == null || "".equals(rawVal)) {
-                    setFieldValue(entity, prop, null);
-                } else {
-                    Object foreignId = (rawVal instanceof Map<?, ?> m) ? m.get("id") : rawVal;
-                    if (foreignId != null && !"".equals(foreignId)) {
-                        EntityMetadata relMeta = scanner.getMetadata(fieldMeta.getLookupTargetEntity());
-                        Class<?> relClass = loadClass(relMeta.getJavaClassName());
-                        Object convertedRelId = convertId(foreignId, relMeta);
-                        Object relProxy = entityManager.getReference(relClass, convertedRelId);
-                        setFieldValue(entity, prop, relProxy);
-                    } else {
-                        setFieldValue(entity, prop, null);
+            try {
+                switch (fieldMeta.getFieldType()) {
+                    case RELATION_MANY_TO_ONE, RELATION_ONE_TO_ONE -> {
+                        Object foreignId = (rawVal instanceof Map<?, ?> m) ? m.get("id") : rawVal;
+                        setFieldValue(entity, prop, foreignId == null || "".equals(foreignId) ? null : reference(fieldMeta, foreignId));
                     }
+                    case RELATION_MANY_TO_MANY -> {
+                        if (fieldMeta.isReadOnly()) continue;
+                        bindManyToMany(entity, fieldMeta, rawVal);
+                    }
+                    default -> setFieldValue(entity, prop, parseFieldValue(rawVal, fieldMeta, entity.getClass()));
                 }
-                continue;
+            } catch (EntityNotFoundException | NoSuchElementException e) {
+                errors.put(prefix + prop, "The selected record no longer exists");
+            } catch (RuntimeException e) {
+                errors.put(prefix + prop, invalidValueMessage(fieldMeta));
             }
+        }
+    }
 
-            // Normal attribute
-            Object parsedVal = parseFieldValue(rawVal, fieldMeta, entity.getClass());
-            setFieldValue(entity, prop, parsedVal);
+    private String invalidValueMessage(FieldMetadata field) {
+        return switch (field.getFieldType()) {
+            case NUMBER -> "Enter a valid number";
+            case DATE -> "Enter a valid date";
+            case DATE_TIME -> "Enter a valid date and time";
+            case ENUM -> "Choose one of the listed options";
+            default -> "This value is not valid";
+        };
+    }
+
+    private Object reference(FieldMetadata fieldMeta, Object rawId) {
+        EntityMetadata relMeta = scanner.getMetadata(fieldMeta.getLookupTargetEntity());
+        if (relMeta == null) throw new NoSuchElementException(fieldMeta.getLookupTargetEntity());
+        Object found = entityManager.find(loadClass(relMeta.getJavaClassName()), convertId(rawId, relMeta));
+        if (found == null) throw new NoSuchElementException(String.valueOf(rawId));
+        return found;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindManyToMany(Object entity, FieldMetadata fieldMeta, Object rawVal) {
+        List<Object> targets = new ArrayList<>();
+        if (rawVal instanceof Collection<?> values) {
+            for (Object value : values) {
+                Object id = value instanceof Map<?, ?> m ? m.get("id") : value;
+                if (id != null && !"".equals(id)) targets.add(reference(fieldMeta, id));
+            }
+        }
+        Object current = getFieldValue(entity, fieldMeta.getName());
+        if (current instanceof Collection<?> collection) {
+            // Mutate in place so Hibernate keeps tracking the persistent collection.
+            ((Collection<Object>) collection).clear();
+            ((Collection<Object>) collection).addAll(targets);
+        } else {
+            Field field = findDeclaredField(entity.getClass(), fieldMeta.getName());
+            boolean isSet = field != null && Set.class.isAssignableFrom(field.getType());
+            setFieldValue(entity, fieldMeta.getName(), isSet ? new LinkedHashSet<>(targets) : targets);
         }
     }
 

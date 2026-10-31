@@ -26,23 +26,24 @@ public class JpaAdminSecurityConfiguration {
         var encoder = new BCryptPasswordEncoder();
         var users = new InMemoryUserDetailsManager(User.withUsername(config.getUsername())
                 .password(encoder.encode(config.getPassword())).roles("JPA_ADMIN").build());
+        String api = properties.getPath() + "/api";
         var provider = new DaoAuthenticationProvider(users);
         provider.setPasswordEncoder(encoder);
         // A local authentication manager keeps host application's users and providers separate.
-        http.securityMatcher("/admin/api/**")
+        http.securityMatcher(api + "/**")
                 .authenticationManager(new ProviderManager(provider))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/admin/api/auth/session", "/admin/api/auth/login").permitAll()
+                        .requestMatchers(api + "/auth/session", api + "/auth/login").permitAll()
                         .anyRequest().hasRole("JPA_ADMIN"))
                 .requestCache(cache -> cache.disable())
-                .formLogin(form -> form.loginProcessingUrl("/admin/api/auth/login")
+                .formLogin(form -> form.loginProcessingUrl(api + "/auth/login")
                         .successHandler((request, response, authentication) -> response.setStatus(204))
                         .failureHandler((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\":\"Invalid username or password\"}");
                         }))
-                .logout(logout -> logout.logoutUrl("/admin/api/auth/logout")
+                .logout(logout -> logout.logoutUrl(api + "/auth/logout")
                         .invalidateHttpSession(true).clearAuthentication(true)
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {

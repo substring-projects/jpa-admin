@@ -225,9 +225,17 @@ public class JpaMetamodelScanner {
         }
 
         if (field != null && (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(ManyToMany.class))) {
-            meta.setFieldType(field.isAnnotationPresent(OneToMany.class) ? FieldType.RELATION_ONE_TO_MANY : FieldType.RELATION_MANY_TO_MANY);
+            boolean manyToMany = field.isAnnotationPresent(ManyToMany.class);
+            meta.setFieldType(manyToMany ? FieldType.RELATION_MANY_TO_MANY : FieldType.RELATION_ONE_TO_MANY);
             meta.setInList(false);
-            meta.setInForm(false);
+            Class<?> elementType = getGenericType(field);
+            if (elementType != null) meta.setLookupTargetEntity(elementType.getSimpleName());
+            // Only the owning side of a many-to-many writes the join table, so the inverse side stays read-only.
+            boolean owning = manyToMany && field.getAnnotation(ManyToMany.class).mappedBy().isEmpty();
+            meta.setInForm(owning && field.getAnnotation(AdminInline.class) == null);
+            if (!owning) meta.setReadOnly(true);
+            AdminLookup lookup = field.getAnnotation(AdminLookup.class);
+            if (lookup != null) meta.setLookupProperty(lookup.lookupProperty());
             return;
         }
 

@@ -1,143 +1,115 @@
-import React from 'react';
-import { useAdmin } from '../context/AdminContext';
-import { DynamicIcon } from '../components/DynamicIcon';
-import { Plus, ArrowRight, Layers, Table as TableIcon, Sparkles } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { Link } from 'react-router';
+import { ArrowUpRight, Boxes, Clock, Database, Layers, Plus } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
+import { useAuth } from '@/context/AuthContext';
+import { EntityIcon } from '@/components/DynamicIcon';
+import { PageHeader } from '@/components/PageStates';
+import { ActivityChart } from '@/components/ActivityChart';
+import { formatCount, formatRelative } from '@/lib/format';
+import { useRecentRecords } from '@/lib/storage';
+import { Button } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export const DashboardView: React.FC = () => {
-  const { metadata, navigateToList, navigateToCreate } = useAdmin();
+function StatCard({ label, value, icon, hint }: { label: string; value: string | null; icon: React.ReactNode; hint: string }) {
+  return <Card className="gap-2 py-5">
+    <CardHeader className="px-5">
+      <CardDescription>{label}</CardDescription>
+      <CardAction className="text-muted-foreground [&_svg]:size-4">{icon}</CardAction>
+      <CardTitle className="tabular text-3xl font-semibold tracking-tight">
+        {value ?? <Skeleton className="h-9 w-20" />}
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="px-5 text-xs text-muted-foreground">{hint}</CardContent>
+  </Card>;
+}
+
+export function DashboardView() {
+  const { metadata, loading, counts, getEntity } = useAdmin();
+  const { username } = useAuth();
+  const recent = useRecentRecords().filter(r => getEntity(r.entity));
 
   const groups = Array.from(new Set(metadata.map(e => e.group || 'General')));
+  const total = counts ? Object.values(counts).reduce((sum, n) => sum + n, 0) : null;
+  const largest = counts && metadata.length
+    ? [...metadata].sort((a, b) => (counts[b.entityName] ?? 0) - (counts[a.entityName] ?? 0))[0] : undefined;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-5 sm:p-8 text-white shadow-xl shadow-emerald-900/10">
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-white border border-white/20">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Zero Configuration JPA Admin</span>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl text-white">
-            Welcome to your JPA Admin Console
-          </h1>
-          <p className="text-emerald-50 text-sm sm:text-base leading-relaxed">
-            All your JPA entities are automatically discovered and ready for full CRUD operations, search, filters, and custom actions.
-          </p>
-        </div>
-      </div>
+  return <div className="mx-auto w-full max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
+    <PageHeader title={`${greeting}, ${username}`} description="Here's an overview of the data managed in this application." />
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <Card className="flex items-center p-6 gap-4">
-          <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-            <TableIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold tracking-tight">{metadata.length}</div>
-            <div className="text-xs text-muted-foreground font-medium">Entities Discovered</div>
-          </div>
-        </Card>
-
-        <Card className="flex items-center p-6 gap-4">
-          <div className="p-3 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-            <Layers className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold tracking-tight">{groups.length}</div>
-            <div className="text-xs text-muted-foreground font-medium">Domain Groups</div>
-          </div>
-        </Card>
-
-        <Card className="flex items-center p-6 gap-4">
-          <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold tracking-tight">Active</div>
-            <div className="text-xs text-muted-foreground font-medium">Metamodel Status</div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Entity Cards Grid */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-3 items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight">Registered Entities</h2>
-          <span className="text-xs text-muted-foreground">{metadata.length} entities managed</span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {metadata.map(entity => (
-            <Card
-              key={entity.entityName}
-              className="group flex flex-col justify-between hover:shadow-md hover:border-primary/50 transition-all"
-            >
-              <CardHeader className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2.5 rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <DynamicIcon name={entity.icon || 'database'} className="w-5 h-5" />
-                  </div>
-                  <Badge variant="secondary" className="font-medium text-xs">
-                    {entity.group || 'General'}
-                  </Badge>
-                </div>
-
-                <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                  {entity.pluralName || entity.displayName}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {entity.fields.length} attributes &bull; {entity.inlines.length} inlines
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="p-6 pt-0">
-                <div className="flex flex-wrap gap-1.5 pt-2">
-                  {entity.fields.slice(0, 4).map(f => (
-                    <Badge variant="secondary"
-                      key={f.name}
-                      className="text-[11px] px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-mono"
-                    >
-                      {f.name}
-                    </Badge>
-                  ))}
-                  {entity.fields.length > 4 && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground">
-                      +{entity.fields.length - 4} more
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-
-              <CardFooter className="p-6 pt-3 border-t flex flex-wrap gap-3 items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigateToList(entity.entityName)}
-                  className="gap-1.5 text-xs font-semibold text-primary hover:text-primary"
-                >
-                  <span>Browse Table</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-
-                {entity.creatable && !entity.readOnly && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => navigateToCreate(entity.entityName)}
-                    className="h-8 w-8 rounded-lg"
-                    title={`Create New ${entity.displayName}`}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatCard label="Total records" value={total == null ? null : formatCount(total)} icon={<Database />} hint={`Across ${metadata.length} entities`} />
+      <StatCard label="Entities" value={loading ? null : String(metadata.length)} icon={<Boxes />} hint="Discovered from your JPA model" />
+      <StatCard label="Domain groups" value={loading ? null : String(groups.length)} icon={<Layers />} hint={groups.slice(0, 3).join(', ') || '—'} />
+      <StatCard label="Largest table" value={largest ? (largest.pluralName || largest.displayName) : loading || !counts ? null : '—'} icon={<ArrowUpRight />}
+        hint={largest && counts ? `${formatCount(counts[largest.entityName] ?? 0)} records` : 'No data yet'} />
     </div>
-  );
-};
+
+    <ActivityChart />
+
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="space-y-6 lg:col-span-2">
+        {loading && <Card><CardContent className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</CardContent></Card>}
+        {groups.map(group => <Card key={group} className="gap-0 py-0">
+          <CardHeader className="border-b px-5 py-4 [.border-b]:pb-4">
+            <CardTitle className="text-sm font-semibold">{group}</CardTitle>
+            <CardDescription>{(n => `${n} ${n === 1 ? 'entity' : 'entities'}`)(metadata.filter(e => (e.group || 'General') === group).length)}</CardDescription>
+          </CardHeader>
+          <ul className="divide-y">
+            {metadata.filter(e => (e.group || 'General') === group).map(entity => {
+              const count = counts?.[entity.entityName];
+              return <li key={entity.entityName} className="group relative flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/50">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background text-muted-foreground group-hover:text-primary">
+                  <EntityIcon entity={entity} className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Link to={`/${entity.entityName}`} className="font-medium after:absolute after:inset-0">{entity.pluralName || entity.displayName}</Link>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {entity.readOnly ? 'Read-only' : [entity.creatable && 'Create', entity.updatable && 'Edit', entity.deletable && 'Delete'].filter(Boolean).join(' · ')}
+                    {entity.actions.length > 0 && ` · ${entity.actions.length} action${entity.actions.length > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {count == null ? <Skeleton className="h-5 w-10" /> : <span className="tabular text-sm font-semibold">{formatCount(count)}</span>}
+                  <p className="text-xs text-muted-foreground">records</p>
+                </div>
+                {entity.creatable && !entity.readOnly && <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button asChild variant="ghost" size="icon-sm" className="relative z-10 text-muted-foreground">
+                      <Link to={`/${entity.entityName}/new`} aria-label={`New ${entity.displayName}`}><Plus /></Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New {entity.displayName}</TooltipContent>
+                </Tooltip>}
+              </li>;
+            })}
+          </ul>
+        </Card>)}
+      </div>
+
+      <Card className="h-fit gap-0 py-0">
+        <CardHeader className="border-b px-5 py-4 [.border-b]:pb-4">
+          <CardTitle className="text-sm font-semibold">Recently viewed</CardTitle>
+          <CardDescription>Records you opened on this device</CardDescription>
+        </CardHeader>
+        {recent.length === 0
+          ? <div className="flex flex-col items-center gap-2 px-5 py-10 text-center text-sm text-muted-foreground">
+              <Clock className="size-5" />Records you open will appear here.
+            </div>
+          : <ul className="divide-y">{recent.map(r => {
+              const entity = getEntity(r.entity)!;
+              return <li key={`${r.entity}:${r.id}`} className="relative flex items-center gap-3 px-5 py-3 hover:bg-muted/50">
+                <EntityIcon entity={entity} className="size-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <Link to={`/${entity.entityName}/${encodeURIComponent(r.id)}`} className="block truncate text-sm font-medium after:absolute after:inset-0">{r.label}</Link>
+                  <p className="text-xs text-muted-foreground">{entity.displayName} · {formatRelative(new Date(r.at).toISOString())}</p>
+                </div>
+              </li>;
+            })}</ul>}
+      </Card>
+    </div>
+  </div>;
+}

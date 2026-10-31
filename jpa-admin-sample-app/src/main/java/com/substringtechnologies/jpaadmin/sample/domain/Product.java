@@ -3,6 +3,8 @@ package com.substringtechnologies.jpaadmin.sample.domain;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import com.substringtechnologies.jpaadmin.annotations.ActionScope;
 import com.substringtechnologies.jpaadmin.annotations.AdminAction;
@@ -17,6 +19,8 @@ import com.substringtechnologies.jpaadmin.annotations.BadgeMap;
 import com.substringtechnologies.jpaadmin.annotations.SortDir;
 import com.substringtechnologies.jpaadmin.annotations.WidgetType;
 import jakarta.persistence.Column;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -44,30 +48,35 @@ public class Product {
     @AdminField(label = "ID", order = 1, sortable = true)
     private Long id;
 
+    @Column(length = 500)
+    @AdminField(label = "Image", order = 2, description = "Link to the product photo")
+    @AdminWidget(type = WidgetType.IMAGE_URL)
+    private String imageUrl;
+
     @Column(nullable = false)
     @NotBlank
-    @AdminField(label = "Product Title", order = 2, searchable = true, sortable = true)
+    @AdminField(label = "Product Title", order = 3, searchable = true, sortable = true)
     private String name;
 
     @Lob
     @Column(length = 2000)
-    @AdminField(label = "Description", order = 3, inList = false)
+    @AdminField(label = "Description", order = 4, inList = false)
     @AdminWidget(type = WidgetType.TEXTAREA)
     private String description;
 
     @NotNull
     @Positive
-    @AdminField(label = "Price ($)", order = 4, sortable = true, filterable = true)
+    @AdminField(label = "Price ($)", order = 5, sortable = true, filterable = true)
     private BigDecimal price;
 
     @NotNull
     @Min(0)
-    @AdminField(label = "Stock Qty", order = 5, sortable = true)
+    @AdminField(label = "Stock Qty", order = 6, sortable = true)
     private Integer stockQuantity;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    @AdminField(label = "Status", order = 6, filterable = true)
+    @AdminField(label = "Status", order = 7, filterable = true)
     @AdminBadge(mapping = {
             @BadgeMap(value = "DRAFT", color = BadgeColor.GRAY, label = "Draft"),
             @BadgeMap(value = "PUBLISHED", color = BadgeColor.GREEN, label = "Published"),
@@ -78,16 +87,32 @@ public class Product {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
-    @AdminField(label = "Category", order = 7, filterable = true)
+    @AdminField(label = "Category", order = 8, filterable = true)
     @AdminLookup(lookupProperty = "name", searchProperty = "name", quickCreate = true)
     private Category category;
 
+    @Column(length = 4000)
+    @AdminField(label = "Marketing Copy", order = 12, inList = false, description = "Formatted text shown on the storefront")
+    @AdminWidget(type = WidgetType.RICH_TEXT)
+    private String marketingCopy;
+
+    @Column(length = 4000)
+    @AdminField(label = "Specifications (JSON)", order = 13, inList = false)
+    @AdminWidget(type = WidgetType.CODE_EDITOR)
+    private String specifications;
+
+    @ManyToMany
+    @JoinTable(name = "product_tags", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    @AdminField(label = "Tags", order = 11)
+    @AdminLookup(lookupProperty = "name")
+    private Set<Tag> tags = new LinkedHashSet<>();
+
     @Column(updatable = false)
-    @AdminField(label = "Created At", order = 8, readOnly = true, inForm = false)
+    @AdminField(label = "Created At", order = 9, readOnly = true, inForm = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(insertable = false)
-    @AdminField(label = "Created At (Instant)", order = 9, readOnly = true, inForm = false)
+    @AdminField(label = "Created At (Instant)", order = 10, readOnly = true, inForm = false)
     private Instant createdAtInstant = Instant.now();
 
     public Product() {
@@ -106,7 +131,7 @@ public class Product {
     }
 
     @Transient
-    @AdminComputed(label = "In Stock?", order = 9)
+    @AdminComputed(label = "In Stock?", order = 10)
     public boolean isInStock() {
         return stockQuantity != null && stockQuantity > 0;
     }
@@ -163,6 +188,17 @@ public class Product {
     public void setStatus(ProductStatus status) {
         this.status = status;
     }
+
+    public String getMarketingCopy() { return marketingCopy; }
+    public void setMarketingCopy(String marketingCopy) { this.marketingCopy = marketingCopy; }
+    public String getSpecifications() { return specifications; }
+    public void setSpecifications(String specifications) { this.specifications = specifications; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public Set<Tag> getTags() { return tags; }
+    public void setTags(Set<Tag> tags) { this.tags = tags; }
 
     public Category getCategory() {
         return category;

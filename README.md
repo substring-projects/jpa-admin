@@ -33,13 +33,16 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 ### ⚡ Instant JPA Entity Discovery & Full CRUD
 - **Zero-Configuration Metamodel Introspection:** Automatically scans and discovers all JPA `@Entity` classes at boot time without boilerplate code.
 - **Dynamic Data Grids:** Server-side pagination, adjustable page sizes, multi-column sorting, and debounce-optimized full-text search.
-- **Scalar & Column Filtering:** Instant filtering across entity attributes, strings, numbers, dates, and enums.
+- **Filters & Saved Views:** Text, enum and boolean filters, searchable relation filters, and min/max or from/to ranges for numbers and dates. Filters show as removable chips, and any search/filter/sort combination can be saved as a named view.
+- **Edit in Place:** Change a status, number, date or relation straight from the table without opening the form.
 - **Smart Form Generation:** Type-aware form controls for string inputs, text areas, datetime formatters, toggle switches for booleans, and enum selects.
 
 ### 🔗 Intelligent Relationship Management
 - **Searchable Foreign Keys:** Automatically resolves `@ManyToOne` and `@OneToOne` associations into asynchronous, searchable select dropdowns.
 - **Descriptive Entity Labels:** Displays human-readable labels derived from entity `toString()` or marked `@AdminField` identifier instead of raw database IDs.
-- **Inline Collection Views:** Clear, read-only inline representation for `@OneToMany` and `@ManyToMany` collections.
+- **Editable Inline Collections:** `@AdminInline` one-to-many rows (such as order line items) are added, edited and removed inside the parent form and saved in one transaction.
+- **Many-to-Many Multi-Select:** Owning-side `@ManyToMany` fields are edited with a searchable multi-select.
+- **Field-Level Validation:** Bean-validation errors from the server appear next to the exact field, including cells in inline rows.
 
 ### 🛡️ Built-in Enterprise Security & Session Management
 - **Cookie-Backed Authentication:** Dedicated, styled session login portal with configurable administrator credentials.
@@ -51,6 +54,9 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - **`@AdminField`:** Control field ordering, custom display names, form widgets (textarea, toggle, date picker), and read-only/hidden visibility.
 - **`@AdminBadge`:** Map entity status values and enums to clean, color-coded badges (success, warning, destructive, info).
 - **`@AdminAction`:** Register custom business actions and workflow operations directly on domain records.
+
+### ⌨️ Keyboard-First
+- **Command palette (⌘K)** to jump to any entity, recent record or action; `/` to search, `n` for a new record, `j`/`k` to move between rows, `e` to edit, and `?` for the full shortcut list.
 
 ### 🗂️ Batch Operations & Safe Deletions
 - **Multi-Record Selection:** Check individual rows or use select-all to perform bulk operations across tables.

@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
+// Builds use relative asset URLs resolved against the <base href> the server injects; dev serves under /admin/.
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  base: '/admin/',
+  base: command === 'build' ? './' : '/admin/',
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
   build: {
     outDir: 'dist',
@@ -20,4 +21,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

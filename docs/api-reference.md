@@ -23,7 +23,9 @@ All require an authenticated admin session. Modifying requests also require CSRF
 | Method   | Path                           | Request / response                                                  |
 | -------- | ------------------------------ | ------------------------------------------------------------------- |
 | `GET`    | `/metadata`                    | Entity schemas, fields, relationships, and actions.                 |
-| `GET`    | `/{entity}`                    | Paginated records with search, sort, and scalar filters.            |
+| `GET`    | `/stats`                       | `{"counts": {"Product": 5, ...}}`, total records per entity.       |
+| `GET`    | `/stats/timeline?days=30`      | Records created per day (1–365 days) for entities with a creation timestamp such as `createdAt`. |
+| `GET`    | `/{entity}`                    | Paginated records with search, sort, and filters.                   |
 | `GET`    | `/{entity}/{id}`               | One record, including supported inline data.                        |
 | `POST`   | `/{entity}`                    | JSON field map; returns the created record with `201`.              |
 | `PUT`    | `/{entity}/{id}`               | JSON field map; updates supplied fields and returns the record.     |
@@ -32,12 +34,12 @@ All require an authenticated admin session. Modifying requests also require CSRF
 | `GET`    | `/{entity}/lookup`             | `q` and `limit`; returns an array of `{ "id": ..., "label": ... }`. |
 | `POST`   | `/{entity}/actions/{actionId}` | JSON ID array; returns `success` and `result`.                      |
 
-There are no implemented `PATCH`, CSV export, or XLSX export endpoints.
+There is no `PATCH` endpoint. CSV export is done in the browser by paging through `GET /{entity}`. All paths are relative to `{spring.jpa.admin.path}/api` (default `/admin/api`).
 
 ### Listing example
 
 ```http
-GET /admin/api/Product?page=0&size=25&sort=name,asc&q=coffee&status=PUBLISHED
+GET /admin/api/Product?page=0&size=25&sort=name,asc&q=coffee&status=PUBLISHED&category=1&price__gte=10&createdAt__lte=2026-12-31
 ```
 
 | Parameter         | Meaning                                                                                                                       |
@@ -47,7 +49,8 @@ GET /admin/api/Product?page=0&size=25&sort=name,asc&q=coffee&status=PUBLISHED
 | `sort`            | One property and direction, for example `name,asc` or `id,desc`.                                                              |
 | `q`               | Case-insensitive substring search across designated text fields. Falls back to eligible text fields when none are designated. |
 | `search`          | Alias used when `q` is absent or blank.                                                                                       |
-| Other field names | Exact-value filters on recognized scalar properties. Range and multi-value filtering are not implemented.                     |
+| `field=value` | Filter on a `filterable` field. Text matches case-insensitively by substring; enums, booleans and numbers match exactly; single-value relations match the related record's ID; a date-only value on a date-time field matches that whole day. |
+| `field__gte`, `field__lte` | Inclusive range bounds for number, date and date-time fields. A date-only `__lte` on a date-time field covers the end of that day. Invalid values return `400`. |
 
 Example response shape:
 
@@ -77,7 +80,7 @@ Example product payload:
 }
 ```
 
-Use JSON with `Content-Type: application/json`. A single-value relation accepts an ID or an object containing `id`. Send `null` to clear an optional field. `PUT` binds supplied fields; omit sensitive fields to preserve them. Do not echo masked password values back to the API.
+Use JSON with `Content-Type: application/json`. A single-value relation accepts an ID or an object containing `id`; a many-to-many field on the owning side accepts an array of IDs or `{ "id": ... }` objects and replaces the collection. An editable inline collection (a `@OneToMany(mappedBy = ...)` with `@AdminInline`) accepts an array of child objects: rows with an existing ID are updated, rows without one are created (if `canAdd`), and omitted rows are removed (if `canDelete`). Send `null` to clear an optional field. `PUT` binds supplied fields; omit sensitive fields to preserve them. Do not echo masked password values back to the API.
 
 The frontend excludes generated IDs, computed/read-only fields, and unsupported nested fields from its payloads. Direct API clients must not assume these UI restrictions are all enforced by the binder.
 
@@ -85,12 +88,20 @@ The frontend excludes generated IDs, computed/read-only fields, and unsupported 
 
 | Status | Common meaning                                                                                  |
 | ------ | ----------------------------------------------------------------------------------------------- |
-| `400`  | Binding, validation, unsupported-operation, or action failure handled by the entity controller. |
+| `400`  | Invalid filter, unsupported operation, or action failure handled by the entity controller.     |
+| `409`  | A database constraint failed, for example a duplicate value in a unique column.                 |
+| `422`  | Bean validation or value conversion failed. The body includes `fieldErrors`.                    |
 | `401`  | Missing/expired login or invalid credentials.                                                   |
 | `403`  | Missing/invalid CSRF token or insufficient authority.                                           |
 | `404`  | Entity or record not found where the service raises a not-found exception.                      |
 
-Entity-controller errors generally use `{"error": "message"}`. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java) for the exact mappings.
+Entity-controller errors generally use `{"error": "message"}`. Validation failures add `fieldErrors`, keyed by field path (inline rows use `items[0].quantity`):
+
+```json
+{ "error": "Please correct the highlighted fields", "fieldErrors": { "price": "must be greater than 0", "items[0].quantity": "must be greater than 0" } }
+```
+
+Create and update run bean validation before saving and roll back on any error, so a rejected update never changes the stored record. Security errors may use a different response shape. See [AdminApiController](../jpa-admin-core/src/main/java/com/substringtechnologies/jpaadmin/web/AdminApiController.java) for the exact mappings.
 
 ## Complete session example
 

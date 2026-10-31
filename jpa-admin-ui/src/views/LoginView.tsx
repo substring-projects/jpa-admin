@@ -1,11 +1,16 @@
 import { useState, type FormEvent } from 'react';
-import { Database, ArrowRight, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { AlertCircle, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
+import type { Branding } from '@/context/AuthContext';
+import { BrandMark } from '@/components/BrandMark';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-interface Props { title: string; connectionError: string; retry: () => void; onLogin: (username: string, password: string) => Promise<void> }
-export function LoginView({ title, connectionError, retry, onLogin }: Props) {
+interface Props { branding: Branding; connectionError: string; retry: () => void; onLogin: (username: string, password: string) => Promise<void> }
+
+export function LoginView({ branding, connectionError, retry, onLogin }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -19,21 +24,49 @@ export function LoginView({ title, connectionError, retry, onLogin }: Props) {
     catch (err) { setError(err instanceof Error ? err.message : 'Unable to sign in'); setPassword(''); }
     finally { setPending(false); }
   };
-  return <main className="min-h-dvh flex items-center justify-center bg-muted/30 px-4 py-10">
-    <div className="w-full max-w-md space-y-6">
-      <div className="flex items-center justify-center gap-3"><div className="rounded-xl bg-primary p-3 text-primary-foreground"><Database className="h-6 w-6" /></div><span className="text-lg font-semibold tracking-tight break-words">{title}</span></div>
-      <Card className="shadow-lg">
-        <CardHeader className="space-y-2 pb-6"><CardTitle className="text-2xl">Welcome back</CardTitle><CardDescription>Sign in to manage your application.</CardDescription></CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-5" aria-busy={pending}>
-            {(error || connectionError) && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error || connectionError}{connectionError && <Button type="button" variant="link" className="h-auto p-0 ml-2" onClick={retry}>Retry connection</Button>}</div>}
-            <div className="space-y-2"><label htmlFor="username" className="text-sm font-medium">Username</label><Input id="username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={username} onChange={event => setUsername(event.target.value)} disabled={pending} placeholder="Enter your username" /></div>
-            <div className="space-y-2"><label htmlFor="password" className="text-sm font-medium">Password</label><div className="relative"><Input id="password" name="password" type={visible ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} disabled={pending} placeholder="Enter your password" className="pr-12" /><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-0.5" aria-label={visible ? 'Hide password' : 'Show password'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div></div>
-            <Button type="submit" className="w-full gap-2" disabled={pending}>{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}{pending ? 'Signing in…' : 'Sign in'}</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <p className="flex justify-center items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" />Authorized administrators only</p>
+  const message = error || connectionError;
+  return <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-muted/40 p-6">
+    <div className="flex items-center gap-2.5">
+      <BrandMark logoUrl={branding.logoUrl} title={branding.title} />
+      <span className="text-base font-semibold tracking-tight">{branding.title}</span>
     </div>
+    <Card className="w-full max-w-sm">
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Welcome back</CardTitle>
+        <CardDescription>Sign in to your admin account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="grid gap-5" aria-busy={pending}>
+          {message && <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>
+              {message}
+              {connectionError && !error && <Button type="button" variant="link" className="h-auto p-0" onClick={retry}>Retry connection</Button>}
+            </AlertDescription>
+          </Alert>}
+          <div className="grid gap-2">
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required autoFocus
+              value={username} onChange={event => setUsername(event.target.value)} disabled={pending} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input id="password" name="password" type={visible ? 'text' : 'password'} autoComplete="current-password" required
+                value={password} onChange={event => setPassword(event.target.value)} disabled={pending} className="pr-10" />
+              <Button type="button" variant="ghost" size="icon-sm" className="absolute right-0.5 top-0.5 text-muted-foreground"
+                aria-label={visible ? 'Hide password' : 'Show password'} onClick={() => setVisible(!visible)}>
+                {visible ? <EyeOff /> : <Eye />}
+              </Button>
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending && <Loader2 className="animate-spin" />}
+            {pending ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" />Authorized administrators only</p>
   </main>;
 }

@@ -74,6 +74,28 @@ public class DataInitializer implements CommandLineRunner {
                 home
         );
 
+        Tag bestseller = new Tag("Bestseller", "#16a34a");
+        Tag premium = new Tag("Premium", "#7c3aed");
+        Tag newArrival = new Tag("New arrival", "#2563eb");
+        Tag clearance = new Tag("Clearance", "#dc2626");
+        entityManager.persist(bestseller);
+        entityManager.persist(premium);
+        entityManager.persist(newArrival);
+        entityManager.persist(clearance);
+        p1.setImageUrl("/images/products/iphone.svg");
+        p2.setImageUrl("/images/products/macbook.svg");
+        p3.setImageUrl("/images/products/headphones.svg");
+        p4.setImageUrl("/images/products/overcoat.svg");
+        // p5 (espresso machine) is left without an image to show the empty state.
+        p1.setMarketingCopy("<h2>Built for pros</h2><p>The <strong>most powerful iPhone</strong> yet, with a titanium design.</p><ul><li>A18 Pro chip</li><li>48MP Fusion camera</li></ul>");
+        p1.setSpecifications("{\n  \"display\": \"6.9 inch\",\n  \"storage\": [\"256GB\", \"512GB\", \"1TB\"],\n  \"weight_g\": 227\n}");
+        p1.getTags().add(bestseller);
+        p1.getTags().add(premium);
+        p2.getTags().add(premium);
+        p3.getTags().add(bestseller);
+        p4.getTags().add(clearance);
+        p5.getTags().add(newArrival);
+
         entityManager.persist(p1);
         entityManager.persist(p2);
         entityManager.persist(p3);

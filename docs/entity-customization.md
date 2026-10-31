@@ -48,12 +48,12 @@ public class Product {
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `@AdminResource`            | `displayName`, `pluralName`, `group`, `icon`, `order`, `pageSize`, `defaultSortBy`, `defaultSortDir`                               | Controls entity presentation and defaults.                                                                                         |
 | `@AdminResource`            | `hidden`, `readOnly`, `creatable`, `updatable`, `deletable`                                                                        | `hidden` skips discovery. Entity-level CRUD flags are checked by the CRUD service; custom actions have separate behavior.          |
-| `@AdminField`               | `label`, `description`, `placeholder`, `order`, `inList`, `inForm`, `inDetail`, `readOnly`, `searchable`, `sortable`, `filterable` | Controls metadata and UI. There is no standalone detail-view screen yet.                                                           |
-| `@AdminWidget`              | `type`                                                                                                                             | Implemented special controls include textarea, password, and boolean switch. `RICH_TEXT` currently renders a plain textarea.       |
+| `@AdminField`               | `label`, `description`, `placeholder`, `order`, `inList`, `inForm`, `inDetail`, `readOnly`, `searchable`, `sortable`, `filterable` | Controls metadata and UI. `filterable` fields appear in the list's filter panel: relations as a searchable picker, numbers and dates as ranges. |
+| `@AdminWidget`              | `type`                                                                                                                             | `TEXTAREA`, `RICH_TEXT` (formatted editor; stored as HTML and sanitized before display), `CODE_EDITOR` (monospace editor with line numbers), `PASSWORD`, `BOOLEAN_SWITCH`, `COLOR_PICKER`, `IMAGE_URL`. `FILE_UPLOAD` is not implemented. |
 | `@AdminBadge` / `@BadgeMap` | `value`, `color`, `label`                                                                                                          | Maps enum/string values to table badges.                                                                                           |
 | `@AdminSensitive`           | Marker annotation                                                                                                                  | Masks non-null API values and hides the field from the list by default. Names containing `password` or `secret` are also detected. |
-| `@AdminLookup`              | `lookupProperty`, `searchProperty`, `quickCreate`                                                                                  | Single-value relations are supported; some options remain incomplete, as explained below.                                          |
-| `@AdminInline`              | `type`, `title`, `canAdd`, `canDelete`, `limit`                                                                                    | Discovers related collections; UI rendering is currently read-only.                                                                |
+| `@AdminLookup`              | `lookupProperty`, `searchProperty`, `quickCreate`                                                                                  | Single-value relations and owning-side `@ManyToMany` collections (multi-select) are supported; some options remain incomplete, as explained below. |
+| `@AdminInline`              | `type`, `title`, `canAdd`, `canDelete`, `limit`                                                                                    | `@OneToMany(mappedBy = ...)` collections are edited as rows inside the parent form and saved with it. Many-to-many inlines are read-only. |
 | `@AdminComputed`            | `label`, `order`, `inList`, `inDetail`, `format`                                                                                   | Use conventional `get...` / `is...` getters. Custom formatting is not implemented.                                                 |
 | `@AdminAction`              | `name`, `icon`, `confirmation`, `scope`                                                                                            | Exposes supported entity methods as actions.                                                                                       |
 | `@AdminPermission`          | `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles`                                                                  | Declared API; granular authorization is not implemented.                                                                           |
@@ -95,15 +95,26 @@ private String apiKey;
 
 Sensitive values are returned as a mask rather than their original contents. This annotation does not encrypt or hash stored entity values. Admin account password handling and domain entity password handling are separate concerns.
 
-### Read-only inline collections
+### Inline collections
 
 ```java
-@OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-@AdminInline(title = "Order items", type = InlineType.TABULAR)
+@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+@AdminInline(title = "Order items", type = InlineType.TABULAR, canAdd = true, canDelete = true, limit = 50)
 private java.util.List<OrderItem> items = new java.util.ArrayList<>();
 ```
 
-The current edit form displays these related records. It does not implement adding, editing, or deleting child rows within the parent form, regardless of the annotation's `canAdd` or `canDelete` options.
+The parent's edit form shows these rows as an editable table. Users can change existing rows, add rows when `canAdd` is true, and remove rows when `canDelete` is true. The rows are saved in the same transaction as the parent. Each child is bean-validated, and its errors are shown in the matching cell. The child's back-reference (`order` here) is set automatically and is not shown as a column. `limit` caps the number of rows. Many-to-many inlines stay read-only, because removing a row would delete a shared record.
+
+### Many-to-many fields
+
+```java
+@ManyToMany
+@JoinTable(name = "product_tags", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+@AdminLookup(lookupProperty = "name")
+private Set<Tag> tags = new LinkedHashSet<>();
+```
+
+The owning side is edited with a searchable multi-select. The inverse side (`mappedBy`) is read-only, because only the owning side writes the join table. Detail pages list up to 200 linked records.
 
 ### Computed values
 

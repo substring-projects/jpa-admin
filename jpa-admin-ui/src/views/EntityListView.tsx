@@ -1,656 +1,400 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAdmin } from '../context/AdminContext';
-import { fetchRecords, deleteRecord, batchDeleteRecords, executeAction } from '../api/client';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card } from '../components/ui/card';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { toast } from 'sonner';
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '../components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../components/ui/dialog';
-import {
-  Loader2,
-  Plus,
-  Search,
-  RefreshCw,
-  Trash2,
-  Edit2,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Filter,
-  CheckSquare,
-  Square,
-  AlertTriangle,
-  Zap,
-  MoreHorizontal,
-  X,
+  ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsLeftRight, ChevronsRight, ChevronsUpDown, Copy, Download,
+  Eye, ListFilter, Loader2, MoreHorizontal, Pencil, Plus, RotateCw, Search, Settings2, Trash2, X, Zap,
 } from 'lucide-react';
-import { FieldSelect } from '../components/ui/field-select';
-import { TableSkeleton } from '../components/LoadingSkeletons';
-import { cn } from '../lib/utils';
+import { fetchRecords } from '@/api/client';
+import { useEntity } from '@/context/AdminContext';
+import { useAuth } from '@/context/AuthContext';
+import { CellValue } from '@/components/CellValue';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EntityIcon } from '@/components/DynamicIcon';
+import { ErrorState, NotFound, PageHeader } from '@/components/PageStates';
+import { useEntityMutations } from '@/hooks/use-entity-mutations';
+import { useHotkeys } from '@/hooks/use-hotkeys';
+import { FilterChip, FilterField } from '@/components/list/Filters';
+import { SavedViews } from '@/components/list/SavedViews';
+import { EditableCell, canEditInTable } from '@/components/list/EditableCell';
+import { downloadCsv, toCsv } from '@/lib/csv';
+import { formatCount } from '@/lib/format';
+import { useStored } from '@/lib/storage';
+import { adminUrl } from '@/lib/base-path';
+import { cn } from '@/lib/utils';
+import type { EntityMetadata, FieldMetadata } from '@/types/metadata';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export const EntityListView: React.FC = () => {
-  const { currentEntity, navigateToCreate, navigateToEdit, addToast } = useAdmin();
+const PAGE_SIZES = [10, 25, 50, 100];
+const EXPORT_LIMIT = 50000;
 
-  if (!currentEntity) return null;
+function useListParams(entity: EntityMetadata) {
+  const [params, setParams] = useSearchParams();
+  const defaultSort = entity.defaultSortBy ? `${entity.defaultSortDir === 'ASC' ? '' : '-'}${entity.defaultSortBy}` : '';
+  const sort = params.get('sort') ?? defaultSort;
+  const filters = Object.fromEntries([...params].filter(([key]) => key.startsWith('f.')).map(([key, value]) => [key.slice(2), value]));
+  const update = (changes: Record<string, string | null>, resetPage = true) => setParams(prev => {
+    const next = new URLSearchParams(prev);
+    Object.entries(changes).forEach(([key, value]) => (value == null || value === '' ? next.delete(key) : next.set(key, value)));
+    if (resetPage) next.delete('page');
+    return next;
+  }, { replace: true });
+  return {
+    page: Math.max(1, Number(params.get('page')) || 1),
+    size: Number(params.get('size')) || entity.pageSize || 25,
+    sortField: sort.replace(/^-/, ''),
+    sortDesc: sort.startsWith('-'),
+    q: params.get('q') ?? '',
+    filters,
+    update,
+    query: params.toString(),
+    replaceAll: (query: string) => setParams(new URLSearchParams(query), { replace: true }),
+    clearAll: () => setParams(new URLSearchParams(), { replace: true }),
+  };
+}
 
-  const [records, setRecords] = useState<Record<string, any>[]>([]);
-  const [totalElements, setTotalElements] = useState(0);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(currentEntity.pageSize || 25);
-  const [sortField, setSortField] = useState(currentEntity.defaultSortBy || 'id');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(
-    currentEntity.defaultSortDir?.toLowerCase() === 'asc' ? 'asc' : 'desc'
-  );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+export function EntityListView() {
+  const { entity: entityParam } = useParams();
+  const entity = useEntity(entityParam);
+  if (!entity) return <NotFound message={`No entity named "${entityParam}" is registered.`} />;
+  return <EntityList key={entity.entityName} entity={entity} />;
+}
+
+function EntityList({ entity }: { entity: EntityMetadata }) {
+  const navigate = useNavigate();
+  const { exportEnabled } = useAuth();
+  const { page, size, sortField, sortDesc, q, filters, update, query, replaceAll, clearAll } = useListParams(entity);
+  const filtersKey = JSON.stringify(filters);
+
+  const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [hidden, setHidden] = useStored<string[]>(`jpa-admin-hidden-columns:${entity.entityName}`, []);
+  const [density, setDensity] = useStored<'comfortable' | 'compact'>('jpa-admin-density', 'comfortable');
+  const reload = () => setReloadKey(k => k + 1);
+  const { confirm, closeConfirm, requestDelete, requestAction } = useEntityMutations(entity, reload);
 
-  const [pending, setPending] = useState(false);
-  const mutationInFlight = useRef(false);
-
-  // Selection for bulk actions
-  const [selectedIds, setSelectedIds] = useState<any[]>([]);
-
-  // Modals
-  const [deleteModalId, setDeleteModalId] = useState<any | null>(null);
-  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
-  const [actionConfirm, setActionConfirm] = useState<{ actionId: string; name: string; confirmMsg?: string; recordId?: any } | null>(null);
-
-  const listFields = currentEntity.fields.filter(f => f.inList);
-  const filterableFields = currentEntity.fields.filter(f => f.filterable);
-
-  const requestVersion = useRef(0);
-  const loadData = async () => {
-    const version = ++requestVersion.current;
-    try {
-      setLoading(true);
-      const sortParam = `${sortField},${sortDir}`;
-      const res = await fetchRecords(currentEntity.entityName, page, pageSize, sortParam, searchQuery, filters);
-      if (version !== requestVersion.current) return;
-      if (page > 0 && page * pageSize >= res.totalElements) { setPage(Math.max(0, Math.ceil(res.totalElements / pageSize) - 1)); return; }
-      setRecords(res.content || []);
-      setTotalElements(res.totalElements || 0);
-      setSelectedIds([]);
-    } catch (err: any) {
-      if (version !== requestVersion.current) return;
-      setRecords([]);
-      setTotalElements(0);
-      addToast(err.message || 'Failed to load records', 'error');
-    } finally {
-      if (version === requestVersion.current) setLoading(false);
-    }
-  };
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState(q);
+  const pushedSearch = useRef(q);
+  useEffect(() => {
+    if (search === pushedSearch.current) return;
+    const timer = window.setTimeout(() => { pushedSearch.current = search; update({ q: search }); }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+  useEffect(() => { if (q !== pushedSearch.current) { pushedSearch.current = q; setSearch(q); } }, [q]);
 
   useEffect(() => {
-    setPage(0);
-  }, [currentEntity.entityName, searchQuery, filters, pageSize]);
-
-  useEffect(() => {
+    let active = true;
     setLoading(true);
-    setSelectedIds([]);
-    const timer = window.setTimeout(loadData, 200);
-    return () => { window.clearTimeout(timer); requestVersion.current++; };
-  }, [currentEntity.entityName, page, pageSize, sortField, sortDir, searchQuery, filters]);
+    const sort = sortField ? `${sortField},${sortDesc ? 'desc' : 'asc'}` : undefined;
+    fetchRecords(entity.entityName, page - 1, size, sort, q, filters)
+      .then(res => {
+        if (!active) return;
+        const lastPage = Math.max(1, Math.ceil(res.totalElements / size));
+        if (page > lastPage) { update({ page: String(lastPage) }, false); return; }
+        setRows(res.content ?? []);
+        setTotal(res.totalElements ?? 0);
+        setSelected(new Set());
+        setError(null);
+      })
+      .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Failed to load records'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [entity.entityName, page, size, sortField, sortDesc, q, filtersKey, reloadKey]);
 
-  const handleSort = (fieldName: string) => {
-    if (sortField === fieldName) {
-      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(fieldName);
-      setSortDir('asc');
-    }
+  const listFields = entity.fields.filter(f => f.inList);
+  const visibleFields = listFields.filter(f => !hidden.includes(f.name));
+  const filterableFields = entity.fields.filter(f => f.filterable);
+  const activeFilters = Object.entries(filters).filter(([, value]) => value !== '');
+  const hasQuery = q !== '' || activeFilters.length > 0;
+  const pk = entity.primaryKeyField;
+  const canEdit = entity.updatable && !entity.readOnly;
+  const canDelete = entity.deletable && !entity.readOnly;
+  const canCreate = entity.creatable && !entity.readOnly;
+  const rowActions = entity.actions.filter(a => a.scope === 'SINGLE_ROW' || a.scope === 'BOTH');
+  const bulkActions = entity.actions.filter(a => a.scope === 'BULK_SELECTION' || a.scope === 'BOTH');
+  const selectable = canDelete || bulkActions.length > 0;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const rowIds = useMemo(() => (rows ?? []).map(r => String(r[pk])), [rows, pk]);
+  const selectedRaw = (rows ?? []).filter(r => selected.has(String(r[pk]))).map(r => r[pk]);
+  const allSelected = rowIds.length > 0 && rowIds.every(id => selected.has(id));
+  const someSelected = !allSelected && rowIds.some(id => selected.has(id));
+  const cellPadding = density === 'compact' ? 'py-1.5' : 'py-3';
+
+  const toggleSort = (field: FieldMetadata) => {
+    if (!field.sortable) return;
+    update({ sort: sortField === field.name && !sortDesc ? `-${field.name}` : field.name });
   };
 
-  const handleSelectAll = () => {
-    if (selectedIds.length === records.length) {
-      setSelectedIds([]);
-    } else {
-      const pk = currentEntity.primaryKeyField;
-      setSelectedIds(records.map(r => r[pk]));
-    }
+  const recordPath = (id: unknown) => `/${entity.entityName}/${encodeURIComponent(String(id))}`;
+  const openRow = (event: MouseEvent | KeyboardEvent, id: unknown) => {
+    if ((event.target as HTMLElement).closest('button, a, input, [role="checkbox"], [role="menuitem"]')) return;
+    if (event.metaKey || event.ctrlKey) { window.open(adminUrl(recordPath(id)), '_blank'); return; }
+    navigate(recordPath(id));
   };
 
-  const handleToggleSelect = (id: any) => {
-    setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-  };
-
-  const confirmSingleDelete = async () => {
-    if (deleteModalId == null) return;
-    if (mutationInFlight.current) return;
-    mutationInFlight.current = true;
-    setPending(true);
+  const exportCsv = async () => {
+    setExporting(true);
     try {
-      await deleteRecord(currentEntity.entityName, deleteModalId);
-      addToast('Record deleted successfully');
-      setDeleteModalId(null);
-      loadData();
-    } catch (err: any) {
-      addToast(err.message || 'Failed to delete record', 'error');
-    } finally {
-      mutationInFlight.current = false;
-      setPending(false);
-    }
-  };
-
-  const confirmBulkDelete = async () => {
-    if (mutationInFlight.current) return;
-    mutationInFlight.current = true;
-    setPending(true);
-    try {
-      const count = await batchDeleteRecords(currentEntity.entityName, selectedIds);
-      addToast(`Successfully deleted ${count} record(s)`);
-      setBulkDeleteModalOpen(false);
-      setSelectedIds([]);
-      loadData();
-    } catch (err: any) {
-      addToast(err.message || 'Batch delete failed', 'error');
-    } finally {
-      mutationInFlight.current = false;
-      setPending(false);
-    }
-  };
-
-  const triggerAction = async (actionId: string, specificIds?: any[]) => {
-    if (mutationInFlight.current) return;
-    mutationInFlight.current = true;
-    setPending(true);
-    try {
-      const idsToRun = specificIds !== undefined ? specificIds : selectedIds;
-      const res = await executeAction(currentEntity.entityName, actionId, idsToRun);
-      addToast(typeof res.result === 'string' ? res.result : 'Action executed successfully');
-      setActionConfirm(null);
-      loadData();
-    } catch (err: any) {
-      addToast(err.message || 'Action failed', 'error');
-    } finally {
-      mutationInFlight.current = false;
-      setPending(false);
-    }
-  };
-
-  const renderCellValue = (record: Record<string, any>, field: typeof listFields[0]) => {
-    const val = record[field.name];
-    if (val === null || val === undefined) {
-      return <span className="text-muted-foreground/60 italic">-</span>;
-    }
-
-    // Badge mapping check
-    if (field.badges && field.badges.length > 0) {
-      const mapped = field.badges.find(b => b.value?.toString().toLowerCase() === val.toString().toLowerCase());
-      if (mapped) {
-        return <Badge badgeColor={mapped.color}>{mapped.label}</Badge>;
+      const sort = sortField ? `${sortField},${sortDesc ? 'desc' : 'asc'}` : undefined;
+      const all: Record<string, unknown>[] = [];
+      for (let p = 0; all.length < Math.min(total || EXPORT_LIMIT, EXPORT_LIMIT); p++) {
+        const res = await fetchRecords(entity.entityName, p, 500, sort, q, filters);
+        all.push(...res.content);
+        if (res.content.length < 500) break;
       }
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(`${entity.pluralName || entity.entityName}-${stamp}.csv`.replace(/\s+/g, '-').toLowerCase(), toCsv(visibleFields, all));
+      toast.success(`Exported ${formatCount(all.length)} ${all.length === 1 ? 'row' : 'rows'}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
     }
-
-    if (field.fieldType === 'BOOLEAN') {
-      return val ? (
-        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
-          Yes
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="border-muted text-muted-foreground bg-muted/30">
-          No
-        </Badge>
-      );
-    }
-
-    if (field.fieldType === 'RELATION_MANY_TO_ONE' || field.fieldType === 'RELATION_ONE_TO_ONE') {
-      if (typeof val === 'object' && val !== null) {
-        return <span className="font-medium text-foreground">{val.label || `#${val.id}`}</span>;
-      }
-    }
-
-    if (field.sensitive) {
-      return <span className="font-mono text-xs text-muted-foreground">••••••••</span>;
-    }
-
-    return <span className="truncate max-w-xs block">{val.toString()}</span>;
   };
 
-  const pkField = currentEntity.primaryKeyField;
+  const title = entity.pluralName || entity.displayName;
 
-  return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl break-words font-extrabold tracking-tight">
-            {currentEntity.pluralName || currentEntity.displayName}
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {loading ? "Loading records…" : `${totalElements} total records found`}
-          </p>
-        </div>
+  const focusedRow = () => (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('tr[data-row-id]');
+  const moveFocus = (step: number) => {
+    const all = [...document.querySelectorAll<HTMLElement>('tr[data-row-id]')];
+    if (all.length === 0) return;
+    const index = all.indexOf(focusedRow() as HTMLElement);
+    const next = all[index === -1 ? (step > 0 ? 0 : all.length - 1) : Math.min(all.length - 1, Math.max(0, index + step))];
+    next.focus();
+    next.scrollIntoView({ block: 'nearest' });
+  };
+  const focusedId = () => {
+    const key = focusedRow()?.dataset.rowId;
+    return key == null ? undefined : rows?.find(r => String(r[pk]) === key)?.[pk];
+  };
+  useHotkeys({
+    '/': () => searchRef.current?.focus(),
+    n: () => { if (canCreate) navigate(`/${entity.entityName}/new`); },
+    j: () => moveFocus(1),
+    k: () => moveFocus(-1),
+    e: () => { const id = focusedId(); if (id != null && canEdit) navigate(`${recordPath(id)}/edit`); },
+    x: () => {
+      const key = focusedRow()?.dataset.rowId;
+      if (key == null || !selectable) return;
+      setSelected(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+    },
+  });
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={loadData}
-            disabled={loading}
-            title="Refresh table"
-            className="rounded-xl"
-          >
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin text-primary')} />
-          </Button>
+  return <div className="mx-auto w-full max-w-7xl space-y-4 p-4 sm:p-6 lg:p-8">
+    <PageHeader
+      icon={<EntityIcon entity={entity} />}
+      title={title}
+      description={rows === null ? <Skeleton className="mt-1 h-4 w-28" /> : `${formatCount(total)} ${total === 1 ? 'record' : 'records'}${hasQuery ? ' match your filters' : ''}`}
+      actions={<>
+        {exportEnabled && entity.exportable !== false && <Button variant="outline" size="sm" onClick={exportCsv} disabled={exporting || total === 0}>
+          {exporting ? <Loader2 className="animate-spin" /> : <Download />}Export
+        </Button>}
+        {canCreate && <Button size="sm" asChild><Link to={`/${entity.entityName}/new`}><Plus />New {entity.displayName}</Link></Button>}
+      </>}
+    />
 
-          {currentEntity.creatable && !currentEntity.readOnly && (
-            <Button
-              onClick={() => navigateToCreate(currentEntity.entityName)}
-              className="gap-2 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New {currentEntity.displayName}</span>
-            </Button>
-          )}
-        </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full sm:w-72">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input ref={searchRef} aria-label={`Search ${title}`} placeholder={`Search ${title.toLowerCase()}…`} value={search}
+          onChange={e => setSearch(e.target.value)} className="h-8 pl-8 pr-8" />
+        {search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground"><X className="size-4" /></button>}
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <Card className="p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={`Search across ${currentEntity.displayName}...`}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10 text-sm"
-          />
-        </div>
-
-        {filterableFields.length > 0 && (
-          <Button
-            variant={showFilterDrawer || Object.values(filters).filter(Boolean).length > 0 ? 'secondary' : 'outline'}
-            onClick={() => setShowFilterDrawer(prev => !prev)}
-            className="gap-2 text-sm"
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filters {Object.values(filters).filter(Boolean).length > 0 && `(${Object.values(filters).filter(Boolean).length})`}</span>
+      {filterableFields.length > 0 && <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="border-dashed">
+            <ListFilter />Filter
+            {activeFilters.length > 0 && <Badge variant="secondary" className="ml-0.5 rounded-sm px-1.5 font-normal">{activeFilters.length}</Badge>}
           </Button>
-        )}
-      </Card>
-
-      {/* Filter drawer (expandable) */}
-      {showFilterDrawer && filterableFields.length > 0 && (
-        <Card className="p-5 bg-muted/40 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-slide-in">
-          {filterableFields.map(field => (
-            <div key={field.name} className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">{field.label}</label>
-              {field.fieldType === 'ENUM' && field.enumValues ? (
-                <FieldSelect label={field.label} value={filters[field.name] || ''}
-                  onChange={value => setFilters(prev => ({ ...prev, [field.name]: value }))}
-                  placeholder="All" options={field.enumValues.map(value => ({ value, label: value }))} />
-              ) : field.fieldType === 'BOOLEAN' ? (
-                <FieldSelect label={field.label} value={filters[field.name] || ''}
-                  onChange={value => setFilters(prev => ({ ...prev, [field.name]: value }))}
-                  placeholder="All" options={[{ value: 'true', label: 'True / Yes' }, { value: 'false', label: 'False / No' }]} />
-              ) : (
-                <Input
-                  type="text"
-                  placeholder={`Filter by ${field.label}`}
-                  value={filters[field.name] || ''}
-                  onChange={e => setFilters(prev => ({ ...prev, [field.name]: e.target.value }))}
-                  className="h-9 text-xs"
-                />
-              )}
+        </PopoverTrigger>
+        <PopoverContent align="start" className="max-h-[70vh] w-80 overflow-y-auto">
+          <div className="grid gap-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Filters</p>
+              {activeFilters.length > 0 && <Button variant="ghost" size="xs" onClick={() => update(Object.fromEntries(activeFilters.map(([k]) => [`f.${k}`, null])))}>Reset</Button>}
             </div>
-          ))}
-          <div className="flex items-end">
-            <Button
-              variant="link"
-              onClick={() => setFilters({})}
-              className="text-xs font-semibold text-destructive p-0 h-9"
-            >
-              Reset all filters
-            </Button>
+            {filterableFields.map(field => <FilterField key={field.name} field={field} filters={filters} update={update} />)}
           </div>
-        </Card>
-      )}
+        </PopoverContent>
+      </Popover>}
 
-      {/* Bulk Actions Floating Bar */}
-      {selectedIds.length > 0 && (
-        <div className="p-3 px-5 rounded-2xl bg-foreground text-background flex flex-col sm:flex-row gap-3 sm:items-center justify-between shadow-xl animate-slide-in">
-          <div className="text-sm font-semibold flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-              {selectedIds.length}
-            </span>
-            <span>selected</span>
-          </div>
+      {activeFilters.map(([key, value]) => <FilterChip key={key} fields={entity.fields} filterKey={key} value={value} onRemove={() => update({ [`f.${key}`]: null })} />)}
+      {hasQuery && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); clearAll(); }}>Clear all<X /></Button>}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Custom Admin Actions for Bulk */}
-            {currentEntity.actions
-              .filter(a => a.scope === 'BULK_SELECTION' || a.scope === 'BOTH')
-              .map(act => (
-                <Button
-                  key={act.id}
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    if (act.confirmation) {
-                      setActionConfirm({ actionId: act.id, name: act.name, confirmMsg: act.confirmation });
-                    } else {
-                      triggerAction(act.id);
-                    }
-                  }}
-                  className="gap-1.5 text-xs font-semibold"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{act.name}</span>
-                </Button>
-              ))}
-
-            {currentEntity.deletable && !currentEntity.readOnly && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setBulkDeleteModalOpen(true)}
-                className="gap-1.5 text-xs font-semibold"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Selected</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Processing action…</p>}
-      <p className="md:hidden text-xs text-muted-foreground">Swipe the table horizontally to see all columns and actions.</p>
-      {/* Main Table */}
-      <Card aria-busy={loading} className="min-w-0 overflow-hidden border shadow-sm">
-        <span role="status" className="sr-only">{loading ? "Loading records…" : `${totalElements} records found`}</span>
-        <Table className="min-w-[640px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 text-center">
-                <Button variant="ghost" size="icon"
-                  aria-label="Select all records"
-                  aria-pressed={selectedIds.length > 0 && selectedIds.length === records.length}
-                  disabled={loading || records.length === 0}
-                  onClick={handleSelectAll}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {selectedIds.length > 0 && selectedIds.length === records.length ? (
-                    <CheckSquare className="w-4 h-4 text-primary" />
-                  ) : (
-                    <Square className="w-4 h-4" />
-                  )}
-                </Button>
-              </TableHead>
-              {listFields.map(field => (
-                <TableHead
-                  key={field.name}
-                  onClick={() => field.sortable && handleSort(field.name)}
-                  className={cn(field.sortable && 'cursor-pointer hover:text-foreground select-none')}
-                >
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span>{field.label}</span>
-                    {field.sortable && (
-                      <span>
-                        {sortField === field.name ? (
-                          sortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-muted-foreground/40 hover:opacity-100" />
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && <TableSkeleton columns={listFields.length + 2} />}
-            {!loading && records.map(record => {
-              const id = record[pkField];
-              const isSelected = selectedIds.includes(id);
-
-              return (
-                <TableRow
-                  key={id}
-                  data-state={isSelected ? 'selected' : undefined}
-                >
-                  <TableCell className="text-center">
-                    <Button variant="ghost" size="icon"
-                      aria-label={`Select record ${id}`}
-                      aria-pressed={isSelected}
-                      onClick={() => handleToggleSelect(id)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
-                    </Button>
-                  </TableCell>
-
-                  {listFields.map(field => (
-                    <TableCell key={field.name}>
-                      {renderCellValue(record, field)}
-                    </TableCell>
-                  ))}
-
-                  <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1">
-                      {currentEntity.updatable && !currentEntity.readOnly && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigateToEdit(currentEntity.entityName, id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      {/* Dropdown for custom single-record actions or delete */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
-                          >
-                            <span className="sr-only">Record actions</span><MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          {currentEntity.actions
-                            .filter(a => a.scope === 'SINGLE_ROW' || a.scope === 'BOTH')
-                            .map(act => (
-                              <DropdownMenuItem
-                                key={act.id}
-                                onClick={() => {
-                                  if (act.confirmation) {
-                                    setActionConfirm({
-                                      actionId: act.id,
-                                      name: act.name,
-                                      confirmMsg: act.confirmation,
-                                      recordId: id,
-                                    });
-                                  } else {
-                                    triggerAction(act.id, [id]);
-                                  }
-                                }}
-                                className="gap-2 cursor-pointer"
-                              >
-                                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                                <span>{act.name}</span>
-                              </DropdownMenuItem>
-                            ))}
-
-                          {currentEntity.actions.filter(a => a.scope === 'SINGLE_ROW' || a.scope === 'BOTH').length > 0 &&
-                            currentEntity.deletable && !currentEntity.readOnly && (
-                              <DropdownMenuSeparator />
-                            )}
-
-                          {currentEntity.deletable && !currentEntity.readOnly && (
-                            <DropdownMenuItem
-                              onClick={() => setDeleteModalId(id)}
-                              className="gap-2 text-destructive focus:text-destructive cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete</span>
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-
-            {records.length === 0 && !loading && (
-              <TableRow>
-                <TableCell colSpan={listFields.length + 2} className="text-center py-12 text-muted-foreground">
-                  No records found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Pagination Bar */}
-        <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex flex-wrap items-center gap-2">
-            <span>Rows per page:</span>
-            <div className="w-24"><FieldSelect label="Rows per page" value={String(pageSize)}
-              onChange={value => setPageSize(Number(value))} required
-              options={Array.from(new Set([10, 25, 50, 100, pageSize])).sort((a, b) => a - b).map(size => ({ value: String(size), label: String(size) }))} /></div>
-            <span>
-              Showing {totalElements === 0 ? 0 : page * pageSize + 1} to{' '}
-              {Math.min((page + 1) * pageSize, totalElements)} of {totalElements}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={loading || page === 0}
-              className="h-8 text-xs font-medium"
-            >
-              Previous
+      <div className="ml-auto flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon-sm" aria-label="Refresh" onClick={reload} disabled={loading}>
+              <RotateCw className={cn(loading && rows !== null && 'animate-spin')} />
             </Button>
-            <span className="px-2 font-semibold text-foreground">
-              Page {page + 1} of {Math.max(1, Math.ceil(totalElements / pageSize))}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => p + 1)}
-              disabled={loading || (page + 1) * pageSize >= totalElements}
-              className="h-8 text-xs font-medium"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteModalId !== null} onOpenChange={open => { if (!open && !pending) setDeleteModalId(null); }}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-3 text-destructive py-2">
-            <AlertTriangle className="w-6 h-6 shrink-0" />
-            <p className="text-sm font-medium text-foreground">
-              Are you sure you want to delete this {currentEntity.displayName}? This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button disabled={pending} variant="outline" onClick={() => setDeleteModalId(null)}>
-              Cancel
-            </Button>
-            <Button disabled={pending} variant="destructive" onClick={confirmSingleDelete}>
-              {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {pending ? "Deleting…" : "Delete Record"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Dialog */}
-      <Dialog open={bulkDeleteModalOpen} onOpenChange={open => { if (!open && !pending) setBulkDeleteModalOpen(false); }}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Confirm Bulk Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-3 text-destructive py-2">
-            <AlertTriangle className="w-6 h-6 shrink-0" />
-            <p className="text-sm font-medium text-foreground">
-              Are you sure you want to permanently delete {selectedIds.length} selected record(s)?
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button disabled={pending} variant="outline" onClick={() => setBulkDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={pending} variant="destructive" onClick={confirmBulkDelete}>
-              {pending ? "Deleting…" : `Delete ${selectedIds.length} Records`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Action Confirmation Dialog */}
-      <Dialog open={actionConfirm !== null} onOpenChange={open => { if (!open && !pending) setActionConfirm(null); }}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>{actionConfirm?.name || 'Confirm Action'}</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <p className="text-sm font-medium text-foreground">
-              {actionConfirm?.confirmMsg || `Are you sure you want to execute ${actionConfirm?.name}?`}
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button disabled={pending} variant="outline" onClick={() => setActionConfirm(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={pending}
-              onClick={() => {
-                if (actionConfirm) {
-                  triggerAction(
-                    actionConfirm.actionId,
-                    actionConfirm.recordId != null ? [actionConfirm.recordId] : undefined
-                  );
-                }
-              }}
-            >
-              {pending ? "Executing…" : "Execute"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </TooltipTrigger>
+          <TooltipContent>Refresh</TooltipContent>
+        </Tooltip>
+        <SavedViews entity={entity.entityName} query={query} onApply={view => { setSearch(new URLSearchParams(view).get('q') ?? ''); replaceAll(view); }} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Settings2 />Display</Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel>Density</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={density} onValueChange={v => setDensity(v as typeof density)}>
+              <DropdownMenuRadioItem value="comfortable">Comfortable</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="compact">Compact</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Columns</DropdownMenuLabel>
+            {listFields.map(field => <DropdownMenuCheckboxItem key={field.name} checked={!hidden.includes(field.name)}
+              disabled={!hidden.includes(field.name) && visibleFields.length === 1}
+              onSelect={e => e.preventDefault()}
+              onCheckedChange={checked => setHidden(checked ? hidden.filter(n => n !== field.name) : [...hidden, field.name])}>
+              {field.label}
+            </DropdownMenuCheckboxItem>)}
+            {hidden.length > 0 && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setHidden([])}>Show all columns</DropdownMenuItem></>}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
-  );
-};
+
+    {error && rows === null ? <div className="rounded-xl border"><ErrorState title="Couldn't load records" description={error} onRetry={reload} /></div> : <div className="overflow-hidden rounded-xl border bg-card">
+      <Table containerClassName={cn('max-h-[calc(100dvh-17rem)] overflow-auto', rows?.length !== 0 && 'min-h-48')} aria-busy={loading}
+        className="border-separate border-spacing-0 [&_td]:border-b [&_th]:border-b [&_tbody_tr:last-child_td]:border-b-0">
+        <TableHeader className="sticky top-0 z-20 bg-card">
+          <TableRow className="hover:bg-transparent">
+            {selectable && <TableHead className="sticky left-0 z-10 w-10 min-w-10 bg-card pl-4">
+              <Checkbox aria-label="Select all on this page" disabled={!rows?.length}
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={checked => setSelected(checked ? new Set(rowIds) : new Set())} />
+            </TableHead>}
+            {visibleFields.map((field, index) => {
+              const active = sortField === field.name;
+              const numeric = field.fieldType === 'NUMBER';
+              return <TableHead key={field.name} aria-sort={active ? (sortDesc ? 'descending' : 'ascending') : undefined}
+                className={cn('h-10 whitespace-nowrap text-xs font-medium text-muted-foreground', numeric && 'text-right',
+                  index === 0 && cn('sticky z-10 bg-card', selectable ? 'left-10' : 'left-0 pl-4'))}>
+                {field.sortable
+                  ? <button type="button" onClick={() => toggleSort(field)} className={cn('-mx-2 inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-accent hover:text-foreground', active && 'text-foreground', numeric && 'flex-row-reverse')}>
+                      {field.label}
+                      {active ? (sortDesc ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />) : <ChevronsUpDown className="size-3.5 opacity-40" />}
+                    </button>
+                  : field.label}
+              </TableHead>;
+            })}
+            <TableHead className="sticky right-0 z-10 w-12 bg-card"><span className="sr-only">Actions</span></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className={cn(loading && rows !== null && 'opacity-60 transition-opacity')}>
+          {rows === null && Array.from({ length: 6 }, (_, i) => <TableRow key={i} className="hover:bg-transparent">
+            {selectable && <TableCell className="w-10 min-w-10 pl-4"><Skeleton className="size-4" /></TableCell>}
+            {visibleFields.map(f => <TableCell key={f.name} className={cellPadding}><Skeleton className="h-4 w-full max-w-32" /></TableCell>)}
+            <TableCell />
+          </TableRow>)}
+
+          {rows?.map(record => {
+            const id = record[pk];
+            const key = String(id);
+            const isSelected = selected.has(key);
+            return <TableRow key={key} data-state={isSelected ? 'selected' : undefined} tabIndex={0} data-row-id={key}
+              onClick={e => openRow(e, id)} onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) openRow(e, id); }}
+              className="group/row cursor-pointer hover:bg-muted data-[state=selected]:bg-muted focus-visible:bg-muted focus-visible:outline-none">
+              {selectable && <TableCell className="sticky left-0 z-[1] w-10 min-w-10 bg-card pl-4 group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted group-focus-visible/row:bg-muted">
+                <Checkbox aria-label={`Select ${key}`} checked={isSelected}
+                  onCheckedChange={checked => setSelected(prev => { const next = new Set(prev); if (checked) next.add(key); else next.delete(key); return next; })} />
+              </TableCell>}
+              {visibleFields.map((field, index) => <TableCell key={field.name}
+                className={cn(cellPadding, 'max-w-80', field.fieldType === 'NUMBER' && 'text-right',
+                  index === 0 && cn('sticky z-[1] bg-card font-medium group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted group-focus-visible/row:bg-muted', selectable ? 'left-10' : 'left-0 pl-4'))}>
+                {canEditInTable(entity, field)
+                  ? <EditableCell entity={entity} field={field} record={record} onSaved={updated => setRows(prev => prev?.map(r => (r[pk] === id ? { ...r, ...updated } : r)) ?? prev)}>
+                      <CellValue field={field} value={record[field.name]} />
+                    </EditableCell>
+                  : <CellValue field={field} value={record[field.name]} />}
+              </TableCell>)}
+              <TableCell className={cn(cellPadding, 'sticky right-0 z-[1] bg-card pr-3 text-right group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted group-focus-visible/row:bg-muted')}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground data-[state=open]:bg-accent" aria-label={`Actions for ${key}`}><MoreHorizontal /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onSelect={() => navigate(recordPath(id))}><Eye />View details</DropdownMenuItem>
+                    {canEdit && <DropdownMenuItem onSelect={() => navigate(`${recordPath(id)}/edit`)}><Pencil />Edit</DropdownMenuItem>}
+                    {canCreate && <DropdownMenuItem onSelect={() => navigate(`/${entity.entityName}/new?copy=${encodeURIComponent(key)}`)}><Copy />Duplicate</DropdownMenuItem>}
+                    <DropdownMenuItem onSelect={() => { void navigator.clipboard?.writeText(key); toast.success('ID copied'); }}><ChevronsLeftRight />Copy ID</DropdownMenuItem>
+                    {rowActions.length > 0 && <DropdownMenuSeparator />}
+                    {rowActions.map(action => <DropdownMenuItem key={action.id} onSelect={() => requestAction(action, [id])}><Zap />{action.name}</DropdownMenuItem>)}
+                    {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => requestDelete([id])}><Trash2 />Delete</DropdownMenuItem></>}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>;
+          })}
+        </TableBody>
+      </Table>
+
+      {rows?.length === 0 && <Empty className="border-t">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">{hasQuery ? <Search /> : <EntityIcon entity={entity} />}</EmptyMedia>
+          <EmptyTitle>{hasQuery ? 'No matching records' : `No ${title.toLowerCase()} yet`}</EmptyTitle>
+          <EmptyDescription>{hasQuery ? 'Try a different search term or remove some filters.' : canCreate ? `Create the first ${entity.displayName.toLowerCase()} to get started.` : 'Records will appear here once they exist.'}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          {hasQuery ? <Button variant="outline" onClick={() => { setSearch(''); clearAll(); }}>Clear search and filters</Button>
+            : canCreate && <Button asChild><Link to={`/${entity.entityName}/new`}><Plus />New {entity.displayName}</Link></Button>}
+        </EmptyContent>
+      </Empty>}
+
+      <div className="flex flex-col gap-3 border-t px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="tabular text-muted-foreground">
+          {total === 0 ? 'No records' : `Showing ${formatCount((page - 1) * size + 1)}–${formatCount(Math.min(page * size, total))} of ${formatCount(total)}`}
+        </p>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2">
+            <span className="hidden text-muted-foreground sm:inline">Rows per page</span>
+            <Select value={String(size)} onValueChange={v => update({ size: v })}>
+              <SelectTrigger size="sm" className="w-[4.5rem]" aria-label="Rows per page"><SelectValue /></SelectTrigger>
+              <SelectContent side="top">
+                {Array.from(new Set([...PAGE_SIZES, size])).sort((a, b) => a - b).map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <span className="tabular whitespace-nowrap font-medium">Page {page} of {totalPages}</span>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon-sm" className="hidden sm:inline-flex" aria-label="First page" disabled={page <= 1 || loading} onClick={() => update({ page: null }, false)}><ChevronsLeft /></Button>
+            <Button variant="outline" size="icon-sm" aria-label="Previous page" disabled={page <= 1 || loading} onClick={() => update({ page: page - 1 > 1 ? String(page - 1) : null }, false)}><ChevronLeft /></Button>
+            <Button variant="outline" size="icon-sm" aria-label="Next page" disabled={page >= totalPages || loading} onClick={() => update({ page: String(page + 1) }, false)}><ChevronRight /></Button>
+            <Button variant="outline" size="icon-sm" className="hidden sm:inline-flex" aria-label="Last page" disabled={page >= totalPages || loading} onClick={() => update({ page: String(totalPages) }, false)}><ChevronsRight /></Button>
+          </div>
+        </div>
+      </div>
+    </div>}
+
+    {selected.size > 0 && <div role="toolbar" aria-label="Bulk actions"
+      className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-fit flex-wrap items-center gap-2 rounded-xl border bg-popover p-2 pl-4 text-popover-foreground shadow-lg animate-in fade-in slide-in-from-bottom-2">
+      <span className="tabular text-sm font-medium">{selected.size} selected</span>
+      <span className="mx-1 h-5 w-px bg-border" />
+      {bulkActions.map(action => <Button key={action.id} variant="ghost" size="sm" onClick={() => requestAction(action, selectedRaw)}><Zap />{action.name}</Button>)}
+      {canDelete && <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => requestDelete(selectedRaw)}><Trash2 />Delete</Button>}
+      <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X /></Button>
+    </div>}
+
+    <ConfirmDialog request={confirm} onClose={closeConfirm} />
+  </div>;
+}

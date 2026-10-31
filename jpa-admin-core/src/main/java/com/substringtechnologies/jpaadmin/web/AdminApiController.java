@@ -2,6 +2,7 @@ package com.substringtechnologies.jpaadmin.web;
 
 import com.substringtechnologies.jpaadmin.metadata.EntityMetadata;
 import com.substringtechnologies.jpaadmin.metadata.JpaMetamodelScanner;
+import com.substringtechnologies.jpaadmin.service.AdminValidationException;
 import com.substringtechnologies.jpaadmin.service.DynamicCrudService;
 import com.substringtechnologies.jpaadmin.service.PageResult;
 import org.springframework.data.domain.PageRequest;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/admin/api")
+@RequestMapping("${spring.jpa.admin.path:/admin}/api")
 public class AdminApiController {
 
     private final JpaMetamodelScanner scanner;
@@ -28,6 +29,16 @@ public class AdminApiController {
     @GetMapping("/metadata")
     public ResponseEntity<Collection<EntityMetadata>> getMetadata() {
         return ResponseEntity.ok(scanner.getAllMetadata());
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(Map.of("counts", crudService.countAll()));
+    }
+
+    @GetMapping("/stats/timeline")
+    public ResponseEntity<Map<String, Object>> getTimeline(@RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(crudService.creationTimeline(days));
     }
 
     @GetMapping("/{entity}")
@@ -117,6 +128,26 @@ public class AdminApiController {
             @RequestBody List<Object> ids) {
         Object result = crudService.executeAction(entity, actionId, ids);
         return ResponseEntity.ok(Map.of("success", true, "result", result != null ? result : "Action completed successfully"));
+    }
+
+    @ExceptionHandler(AdminValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(AdminValidationException e) {
+        return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage(), "fieldErrors", e.getFieldErrors()));
+    }
+
+    /** Database constraint failures (duplicate unique values, missing references) without leaking SQL to the client. */
+    @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class, org.hibernate.exception.ConstraintViolationException.class})
+    public ResponseEntity<Map<String, String>> handleConflict(Exception e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error",
+                "This change conflicts with existing data. A value that must be unique may already be in use, or a related record may be missing or still referenced."));
+    }
+
+    @ExceptionHandler(jakarta.persistence.PersistenceException.class)
+    public ResponseEntity<Map<String, String>> handlePersistence(jakarta.persistence.PersistenceException e) {
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException) return handleConflict(e);
+        }
+        return handleGeneralError(e);
     }
 
     @ExceptionHandler(NoSuchElementException.class)

@@ -124,12 +124,13 @@ All properties below use the `spring.jpa.admin.` prefix. Defaults come from [Jpa
 | Property            | Default                 | Current behavior                                                                                                                                                 |
 | ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `enabled`           | `true`                  | Enables the JPA admin auto-configuration. Disabling it does not remove transitive Spring Security dependencies or define the host application's security policy. |
-| `path`              | `/admin`                | Configures static resource mappings. Keep `/admin`: frontend asset URLs, API URLs, and the security matcher are currently fixed to this prefix.                  |
+| `path` | `/admin` | URL prefix for the UI and its API (`{path}/api`). It must start with `/` and have no trailing slash, for example `/backoffice`. The prebuilt UI adapts automatically, so no rebuild is needed. |
 | `title`             | `Spring Boot JPA Admin` | Displayed on login, in the sidebar, and in the browser title.                                                                                                    |
 | `security.username` | `admin`                 | Username for the single configured admin account.                                                                                                                |
 | `security.password` | Empty                   | Required, non-blank password. The sample supplies its own `admin` fallback.                                                                                      |
 | `page-size`         | `25`                    | Bound property, but not wired into entity metadata or the list controller's default. Use `@AdminResource(pageSize = ...)`.                                       |
-| `logo-url`          | Empty                   | Bound property; custom logo rendering is not implemented.                                                                                                        |
-| `export-enabled`    | `true`                  | Bound property; export endpoints and UI controls are not implemented.                                                                                            |
+| `logo-url` | Empty | Image URL shown in the sidebar and on the login page. Falls back to the default mark if it fails to load. |
+| `primary-color` | Empty | Brand accent as a `#rrggbb` hex value (for example `#2563eb`). Other formats are ignored and the built-in theme is used. |
+| `export-enabled` | `true` | Shows the **Export** button on entity tables, which downloads the current search/filter results (up to 50,000 rows) as CSV. |
 
 Changing credentials requires restarting the application. `security.enabled`, `security.roles`, entity include/exclude patterns, and `default-page-size` from the PRD are not implemented configuration options.

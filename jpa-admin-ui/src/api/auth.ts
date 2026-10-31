@@ -1,14 +1,19 @@
+import { API_BASE } from '@/lib/base-path';
+
 export interface AdminSession {
   authenticated: boolean;
   username: string;
   title: string;
   csrfToken: string;
   csrfHeader: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  exportEnabled?: boolean;
 }
 let session: AdminSession | null = null;
 
 export async function fetchSession(): Promise<AdminSession> {
-  const response = await fetch('/admin/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+  const response = await fetch(`${API_BASE}/auth/session`, { credentials: 'same-origin', cache: 'no-store' });
   if (!response.ok) throw new Error('Unable to connect to the admin server. Please try again.');
   session = await response.json();
   return session!;
@@ -16,7 +21,7 @@ export async function fetchSession(): Promise<AdminSession> {
 
 export async function login(username: string, password: string): Promise<AdminSession> {
   const current = await fetchSession();
-  const response = await fetch('/admin/api/auth/login', {
+  const response = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', [current.csrfHeader]: current.csrfToken },
     body: new URLSearchParams({ username, password }),
@@ -27,7 +32,7 @@ export async function login(username: string, password: string): Promise<AdminSe
 
 export async function logout() {
   const current = await fetchSession();
-  const response = await fetch('/admin/api/auth/logout', {
+  const response = await fetch(`${API_BASE}/auth/logout`, {
     method: 'POST', credentials: 'same-origin', headers: { [current.csrfHeader]: current.csrfToken },
   });
   if (!response.ok) throw new Error('Unable to sign out. Please try again.');
