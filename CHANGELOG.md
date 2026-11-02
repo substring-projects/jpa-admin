@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The project follows [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] — release prepared, publication pending
+## [0.2.0] — 2026-11-02
 
 ### Added
 - Optional `jpa-admin-identity` module: database-backed admin users, groups, superusers and enforced entity and action permissions, with schemas for H2, PostgreSQL and MySQL.

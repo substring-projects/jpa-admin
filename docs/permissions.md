@@ -1,6 +1,6 @@
 # Users, groups and entity permissions
 
-This page describes **0.2.0 features (publication pending)**. For local installation, see [Installation](installation.md).
+This page describes **0.2.0 features**. For installation, see [Installation](installation.md).
 
 The default `configured` security mode keeps the existing single admin account. To manage multiple admins with Django-style groups and entity permissions, explicitly enable `database` mode and add the optional JDBC identity module. Host application authentication stays separate in both modes.
 

@@ -2,7 +2,7 @@
 
 <p class="jpa-lead">Build, sign and publish the parent POM and five library modules together (including optional identity). The sample application stays in GitHub and is excluded from Central publication.</p>
 
-The prepared release version is `0.2.0`; publication is pending. The previous release is `0.1.0`, the first Maven Central release. Maven Central is the only distribution channel. The project uses [Apache License 2.0](../LICENSE).
+Version `0.2.0` is published. The previous release is `0.1.0`, the first Maven Central release. Maven Central is the only distribution channel. The project uses [Apache License 2.0](../LICENSE).
 
 See the [0.2.0 release checklist](release-0.2.0.md) for migration notes and validation evidence for this preparation.
 

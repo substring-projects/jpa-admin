@@ -16,7 +16,7 @@ The starter brings Spring Web, Spring Data JPA, Validation and Spring Security.
 
 ## 1. Add the dependency
 
-The examples below target **0.2.0**. Its publication is pending; use the source-build tab until artifacts are available on Maven Central. Use `0.1.0` only if you intentionally need the previous release without the new identity features. Maven uses Central by default; Gradle needs `mavenCentral()`.
+The examples below target **0.2.0**, available on Maven Central. Use `0.1.0` only if you intentionally need the previous release without the new identity features. Maven uses Central by default; Gradle needs `mavenCentral()`.
 
 The release consists of the parent POM and five library modules, including optional identity. Use matching versions. No JitPack repository is supported.
 
@@ -78,7 +78,7 @@ Older JitPack builds used `com.github.substring-projects.jpa-admin`. When migrat
 
 ## Optional database identity (0.2.0)
 
-The 0.2.0 source build adds `jpa-admin-identity` for dedicated admin users, groups and entity permissions. Install the repository locally and use **the same version for both starter and identity dependencies**. The starter alone still supports configured-account login. Follow [Identity database setup](database-setup.md) for H2/PostgreSQL/MySQL dependencies and migrations, or [Custom identity stores](custom-identity.md) for another database. These identity features must not be assumed available in 0.1.0.
+Version 0.2.0 adds `jpa-admin-identity` for dedicated admin users, groups and entity permissions. Use **the same version for both starter and identity dependencies**, from Maven Central or a local build. The starter alone still supports configured-account login. Follow [Identity database setup](database-setup.md) for H2/PostgreSQL/MySQL dependencies and migrations, or [Custom identity stores](custom-identity.md) for another database. These identity features must not be assumed available in 0.1.0.
 
 ## 2. Set the admin login
 

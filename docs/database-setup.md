@@ -1,6 +1,6 @@
 # Identity database setup
 
-This guide covers the optional `jpa-admin-identity` module in the **0.2.0 source build**. Build and install the repository first; do not assume these features exist in the documented 0.1.0 release. Keep the starter and identity module on the same version.
+This guide covers the optional `jpa-admin-identity` module in the **0.2.0 release**, available on Maven Central. These features do not exist in the 0.1.0 release. Keep the starter and identity module on the same version.
 
 ## Three separate concepts
 

@@ -68,7 +68,7 @@ See [Documentation website](publishing-docs.md) for the theme and publishing.
 
 ## Prepared release version
 
-The prepared version is `0.2.0`; publication is pending. Local installation does not publish it.
+Version `0.2.0` is published. Local installation does not publish changes.
 Run `./mvnw clean install` from the repository root to build and test all modules
 and install them into your local Maven repository. No release profile, GPG signing
 or publishing token is needed.
@@ -84,7 +84,7 @@ A separate local application can use:
 ```
 
 After changing the library, run `./mvnw install` again, then rebuild and restart
-the consuming application. After this release is published, use a new snapshot version for further development rather than overwriting a published release.
+the consuming application. Use a new snapshot version for further development rather than overwriting a published release.
 
 
 ## Seeing UI changes in the running application

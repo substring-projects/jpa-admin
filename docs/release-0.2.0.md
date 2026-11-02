@@ -1,6 +1,6 @@
 # 0.2.0 release checklist
 
-Status: **prepared locally; publication pending**. This page records the release scope, migration requirements and verification evidence. Building/installing locally does not publish to Maven Central.
+Status: **published on Maven Central on 2026-11-02**. This page records the release scope, migration requirements and verification evidence. Building/installing locally does not publish to Maven Central.
 
 ## Release contents
 
@@ -64,7 +64,16 @@ Local preparation used JDK 25.0.3, Node 24.4.0 and installed Chrome. The indepen
 
 The initial artifact review found missing classifiers for the non-Java modules; release packaging now attaches the React source/configuration archive, starter POM sources, and module HTML documentation. Vite was updated from 5.4 to the compatible patched 6.4 maintenance line; the final bundle was rebuilt and retested. Dependency audit results are time-dependent and do not constitute a full application security review.
 
-Remote GitHub Actions status, Java 17 runtime checks, GPG signatures, Central validation and public repository resolution are not claimed as completed. The CI matrix is configured for Java 17/21/25 and now checks non-Java release classifiers as well.
+Publication verification completed for source commit `2678805`:
+
+- [Java 17/21/25 build and browser CI](https://github.com/substring-projects/jpa-admin/actions/runs/41411406645): passed.
+- [H2/PostgreSQL/MySQL contract CI](https://github.com/substring-projects/jpa-admin/actions/runs/41411406624): passed.
+- GPG-signed artifacts uploaded and validated by Central. The first validation found a missing identity project name; commit `2678805` corrected it and added a packaging assertion.
+- Deployment `81493537-1a19-481a-80ef-e2e0fece6a81`: PUBLISHED.
+- All 21 public POM/JAR artifacts matched the uploaded bundle's SHA-256 hashes.
+- Starter and optional identity resolved transitively from Maven Central using an empty local repository.
+
+The release tag `v0.2.0` identifies the artifact source commit. Later documentation-only commits record publication status without changing those artifacts.
 
 ## Final publication steps
 
@@ -81,4 +90,4 @@ Remote GitHub Actions status, Java 17 runtime checks, GPG signatures, Central va
 5. Create the release tag for the exact reviewed commit and publish release notes from [CHANGELOG](../CHANGELOG.md). Do not tag an unreviewed working tree.
 6. Remove publication-pending notices only after availability is confirmed, then publish the docs. Move ongoing development to a new snapshot version after the release.
 
-No Maven Central upload, release tag, Git push or public publication is performed by local release preparation. Signing and remote publication remain separate gates.
+The local preparation stage did not publish. Signing, CI verification, Central validation and public availability were completed separately as recorded above.

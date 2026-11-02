@@ -1,10 +1,10 @@
 # What's new
 
-<p class="jpa-lead">Release notes for <code>0.2.0</code>, followed by historical 0.1.0 notes. Publication of 0.2.0 is pending.</p>
+<p class="jpa-lead">Release notes for <code>0.2.0</code>, followed by historical 0.1.0 notes. Version 0.2.0 is available on Maven Central.</p>
 
-## 0.2.0 release preparation
+## 0.2.0 release notes
 
-These changes describe the current source build, not the 0.1.0 release. [Install from source](installation.md) to try them; use matching module versions.
+These changes are included in 0.2.0. Follow [Installation](installation.md) and use matching module versions.
 
 - Optional `jpa-admin-identity` for dedicated admin users, groups, superusers and enforced entity/action permissions.
 - Database detection and migrations for H2/PostgreSQL/MySQL; real-server contracts for PostgreSQL 18 and MySQL 8.4.
