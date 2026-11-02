@@ -21,7 +21,7 @@ spring:
     admin:
       enabled: true
       path: /admin
-      title: "Durgesh Admin Console"
+      title: "Substring Admin Console"
       pageSize: 10
       export-enabled: true
       security:
@@ -46,6 +46,7 @@ spring:
         #   public-key: ${IMAGEKIT_PUBLIC_KEY}
         #   private-key: ${IMAGEKIT_PRIVATE_KEY}
         #   url-endpoint: https://ik.imagekit.io/your_id
+      logo-url: "https://substringtechnologies.com/_next/static/media/substring_logo.e4bf633e.png"
 
 logging:
   level:
