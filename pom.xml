@@ -92,6 +92,11 @@
                 <artifactId>jpa-admin-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.substringtechnologies</groupId>
+                <artifactId>jpa-admin-identity</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

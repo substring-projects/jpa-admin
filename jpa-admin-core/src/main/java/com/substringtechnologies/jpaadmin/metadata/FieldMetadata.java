@@ -22,7 +22,14 @@ public class FieldMetadata {
     private boolean primaryKey = false;
     private boolean generatedValue = false;
     private boolean sensitive = false;
+    /** Shown instead of a set sensitive value; null hides whether a value is set. */
+    private String maskPattern = "••••••••";
     private WidgetType widget = WidgetType.AUTO;
+    private Double min;
+    private Double max;
+    private Double step;
+    private String language;
+    private String previewSize;
     private ValidationMetadata validation = new ValidationMetadata();
     private List<String> enumValues = new ArrayList<>();
     private List<BadgeMetadata> badges = new ArrayList<>();
@@ -31,7 +38,6 @@ public class FieldMetadata {
     private String lookupTargetEntity;
     private String lookupProperty;
     private String searchProperty;
-    private boolean quickCreate = false;
 
     // Computed / Virtual
     private boolean computed = false;
@@ -89,8 +95,26 @@ public class FieldMetadata {
     public boolean isSensitive() { return sensitive; }
     public void setSensitive(boolean sensitive) { this.sensitive = sensitive; }
 
+    public String getMaskPattern() { return maskPattern; }
+    public void setMaskPattern(String maskPattern) { this.maskPattern = maskPattern; }
+
     public WidgetType getWidget() { return widget; }
     public void setWidget(WidgetType widget) { this.widget = widget; }
+
+    public Double getMin() { return min; }
+    public void setMin(Double min) { this.min = min; }
+
+    public Double getMax() { return max; }
+    public void setMax(Double max) { this.max = max; }
+
+    public Double getStep() { return step; }
+    public void setStep(Double step) { this.step = step; }
+
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
+
+    public String getPreviewSize() { return previewSize; }
+    public void setPreviewSize(String previewSize) { this.previewSize = previewSize; }
 
     public ValidationMetadata getValidation() { return validation; }
     public void setValidation(ValidationMetadata validation) { this.validation = validation; }
@@ -109,9 +133,6 @@ public class FieldMetadata {
 
     public String getSearchProperty() { return searchProperty; }
     public void setSearchProperty(String searchProperty) { this.searchProperty = searchProperty; }
-
-    public boolean isQuickCreate() { return quickCreate; }
-    public void setQuickCreate(boolean quickCreate) { this.quickCreate = quickCreate; }
 
     public boolean isComputed() { return computed; }
     public void setComputed(boolean computed) { this.computed = computed; }

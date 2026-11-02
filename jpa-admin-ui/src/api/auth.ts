@@ -27,6 +27,10 @@ export async function login(username: string, password: string): Promise<AdminSe
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', [current.csrfHeader]: current.csrfToken },
     body: new URLSearchParams({ username, password }),
   });
+  if (response.status === 429) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || 'Too many failed sign-in attempts. Try again later.');
+  }
   if (!response.ok) throw new Error(response.status === 401 ? 'Invalid username or password.' : 'Unable to sign in. Please try again.');
   return fetchSession(); // Authentication rotates the session and CSRF token.
 }

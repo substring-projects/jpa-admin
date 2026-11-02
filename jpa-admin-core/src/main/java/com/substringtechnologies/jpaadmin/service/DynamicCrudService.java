@@ -40,6 +40,7 @@ import java.util.*;
 @Service
 @Transactional
 public class DynamicCrudService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DynamicCrudService.class);
 
     private final EntityManager entityManager;
     private final JpaMetamodelScanner scanner;
@@ -313,6 +314,15 @@ public class DynamicCrudService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> lookup(String entityName, String query, int limit) {
+        return lookup(entityName, query, limit, null, null);
+    }
+
+    /**
+     * Picker options. {@code searchProperty} and {@code labelProperty} come from the source field's {@code @AdminLookup}
+     * and must name visible fields of the looked-up entity.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> lookup(String entityName, String query, int limit, String searchProperty, String labelProperty) {
         EntityMetadata metadata = requireMetadata(entityName);
         access.require(metadata, "view");
         Class<?> entityClass = loadClass(metadata.getJavaClassName());
@@ -340,6 +350,17 @@ public class DynamicCrudService {
             }
         }
         if (displayProp == null) displayProp = pkField;
+        if (searchProperty != null && !searchProperty.isBlank()) {
+            FieldMetadata searched = metadata.getField(searchProperty);
+            if (searched == null || searched.isSensitive() || searched.isComputed() || searched.getFieldType() != FieldType.STRING)
+                throw new IllegalArgumentException("Cannot search " + metadata.getDisplayName() + " by " + searchProperty);
+            displayProp = searchProperty;
+        }
+        if (labelProperty != null && !labelProperty.isBlank()) {
+            FieldMetadata labelled = metadata.getField(labelProperty);
+            if (labelled == null || labelled.isSensitive() || labelled.isComputed())
+                throw new IllegalArgumentException("Cannot label " + metadata.getDisplayName() + " by " + labelProperty);
+        }
 
         if (query != null && !query.trim().isEmpty()) {
             String q = "%" + query.trim().toLowerCase() + "%";
@@ -363,7 +384,7 @@ public class DynamicCrudService {
         for (Object item : results) {
             Map<String, Object> map = new HashMap<>();
             Object idVal = getFieldValue(item, pkField);
-            String label = resolveEntityLabel(item, metadata, null);
+            String label = resolveEntityLabel(item, metadata, labelProperty);
             map.put("id", idVal);
             map.put("label", (label != null && !label.isEmpty()) ? label : String.valueOf(idVal));
             list.add(map);
@@ -390,6 +411,21 @@ public class DynamicCrudService {
         }
 
         try {
+            return invokeAction(entityClass, action, entities);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            // Actions report expected business failures, such as "Order already shipped", with these exceptions.
+            if (cause instanceof IllegalArgumentException || cause instanceof IllegalStateException)
+                throw new AdminActionException(cause.getMessage() != null ? cause.getMessage() : action.getName() + " failed", cause);
+            if (cause instanceof RuntimeException runtime) throw runtime;
+            throw new IllegalStateException("Action " + action.getId() + " failed", cause);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Action " + action.getId() + " could not be invoked", e);
+        }
+    }
+
+    private Object invokeAction(Class<?> entityClass, ActionMetadata action, List<Object> entities) throws ReflectiveOperationException {
+        try {
             Method method = entityClass.getDeclaredMethod(action.getMethodName());
             method.setAccessible(true);
 
@@ -407,15 +443,9 @@ public class DynamicCrudService {
             }
         } catch (NoSuchMethodException e) {
             // Check if there is a method accepting List
-            try {
-                Method method = entityClass.getDeclaredMethod(action.getMethodName(), List.class);
-                method.setAccessible(true);
-                return method.invoke(null, entities);
-            } catch (Exception ex) {
-                throw new RuntimeException("Action method execution failed: " + ex.getMessage(), ex);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Action execution error: " + e.getMessage(), e);
+            Method method = entityClass.getDeclaredMethod(action.getMethodName(), List.class);
+            method.setAccessible(true);
+            return method.invoke(null, entities);
         }
     }
 
@@ -516,7 +546,7 @@ public class DynamicCrudService {
             for (Sort.Order o : sort) {
                 if (metadata.hasField(o.getProperty())) {
                     FieldMetadata field = metadata.getField(o.getProperty());
-                    if (field != null && !field.isComputed()) {
+                    if (field != null && !field.isComputed() && !field.isSensitive()) {
                         orders.add(o.isAscending() ? cb.asc(root.get(o.getProperty())) : cb.desc(root.get(o.getProperty())));
                     }
                 }
@@ -529,7 +559,7 @@ public class DynamicCrudService {
                     && !access.canView(candidate.getLookupTargetEntity())) defaultSort = metadata.getPrimaryKeyField();
             if (metadata.hasField(defaultSort)) {
                 FieldMetadata defField = metadata.getField(defaultSort);
-                if (defField != null && !defField.isComputed()) {
+                if (defField != null && !defField.isComputed() && !defField.isSensitive()) {
                     orders.add(metadata.getDefaultSortDir() == com.substringtechnologies.jpaadmin.annotations.SortDir.ASC ?
                             cb.asc(root.get(defaultSort)) : cb.desc(root.get(defaultSort)));
                 }
@@ -574,19 +604,7 @@ public class DynamicCrudService {
 
             // Computed virtual method
             if (fieldMeta.isComputed()) {
-                try {
-                    String getter = "get" + Character.toUpperCase(prop.charAt(0)) + prop.substring(1);
-                    Method m = entity.getClass().getMethod(getter);
-                    map.put(prop, m.invoke(entity));
-                } catch (Exception e) {
-                    try {
-                        String isGetter = "is" + Character.toUpperCase(prop.charAt(0)) + prop.substring(1);
-                        Method m = entity.getClass().getMethod(isGetter);
-                        map.put(prop, m.invoke(entity));
-                    } catch (Exception ex) {
-                        map.put(prop, null);
-                    }
-                }
+                map.put(prop, formatComputed(fieldMeta, computedValue(entity, prop)));
                 continue;
             }
 
@@ -601,9 +619,9 @@ public class DynamicCrudService {
 
             Object val = getFieldValue(entity, prop);
 
-            // Sensitive field masking
-            if (fieldMeta.isSensitive() && val != null) {
-                map.put(prop, "••••••••");
+            // Sensitive values never leave the server; a mask only tells whether one is set.
+            if (fieldMeta.isSensitive()) {
+                if (val != null && fieldMeta.getMaskPattern() != null) map.put(prop, fieldMeta.getMaskPattern());
                 continue;
             }
 
@@ -647,6 +665,31 @@ public class DynamicCrudService {
         }
 
         return map;
+    }
+
+    private Object computedValue(Object entity, String prop) {
+        String suffix = Character.toUpperCase(prop.charAt(0)) + prop.substring(1);
+        for (String getter : new String[]{"get" + suffix, "is" + suffix}) {
+            try {
+                return entity.getClass().getMethod(getter).invoke(entity);
+            } catch (NoSuchMethodException ignored) {
+                // Try the next accessor style.
+            } catch (ReflectiveOperationException e) {
+                log.warn("Computed field {} failed on {}", prop, entity.getClass().getSimpleName(), e);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Object formatComputed(FieldMetadata fieldMeta, Object value) {
+        if (value == null || fieldMeta.getFormat() == null || fieldMeta.getFormat().isBlank()) return value;
+        try {
+            return String.format(fieldMeta.getFormat(), value);
+        } catch (java.util.IllegalFormatException e) {
+            log.warn("@AdminComputed format '{}' doesn't fit {} value of {}", fieldMeta.getFormat(), value.getClass().getSimpleName(), fieldMeta.getName());
+            return String.valueOf(value);
+        }
     }
 
     private static final int MAX_SERIALIZED_REFERENCES = 200;
@@ -740,6 +783,9 @@ public class DynamicCrudService {
             if (fieldMeta.getLookupTargetEntity() != null && !fieldMeta.getLookupTargetEntity().isBlank())
                 access.requireView(fieldMeta.getLookupTargetEntity());
             Object rawVal = payload.get(prop);
+            // Forms send back the mask, or nothing, for sensitive values that weren't changed.
+            if (fieldMeta.isSensitive() && (rawVal != null && rawVal.equals(fieldMeta.getMaskPattern())
+                    || isUpdate && (rawVal == null || rawVal.toString().isEmpty()))) continue;
             try {
                 switch (fieldMeta.getFieldType()) {
                     case RELATION_MANY_TO_ONE, RELATION_ONE_TO_ONE -> {
@@ -750,7 +796,12 @@ public class DynamicCrudService {
                         if (fieldMeta.isReadOnly()) continue;
                         bindManyToMany(entity, fieldMeta, rawVal);
                     }
-                    default -> setFieldValue(entity, prop, parseFieldValue(rawVal, fieldMeta, entity.getClass()));
+                    default -> {
+                        Object value = parseFieldValue(rawVal, fieldMeta, entity.getClass());
+                        String rangeError = rangeError(fieldMeta, value);
+                        if (rangeError != null) errors.put(prefix + prop, rangeError);
+                        else setFieldValue(entity, prop, value);
+                    }
                 }
             } catch (EntityNotFoundException | NoSuchElementException e) {
                 errors.put(prefix + prop, "The selected record no longer exists");
@@ -758,6 +809,19 @@ public class DynamicCrudService {
                 errors.put(prefix + prop, invalidValueMessage(fieldMeta));
             }
         }
+    }
+
+    /** Bounds from {@code @AdminWidget(min, max)}, enforced like bean validation so the API can't bypass the form. */
+    private String rangeError(FieldMetadata field, Object value) {
+        if (!(value instanceof Number number)) return null;
+        BigDecimal decimal = new BigDecimal(number.toString());
+        if (field.getMin() != null && decimal.compareTo(BigDecimal.valueOf(field.getMin())) < 0) return "Must be at least " + plain(field.getMin());
+        if (field.getMax() != null && decimal.compareTo(BigDecimal.valueOf(field.getMax())) > 0) return "Must be at most " + plain(field.getMax());
+        return null;
+    }
+
+    private static String plain(double value) {
+        return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
     }
 
     private String invalidValueMessage(FieldMetadata field) {

@@ -22,7 +22,7 @@ spring:
       enabled: true
       path: /admin
       title: "Substring Admin Console"
-      pageSize: 10
+      page-size: 25
       primary-color: "#1E88E5"
       export-enabled: true
       security:

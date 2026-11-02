@@ -1,5 +1,7 @@
 # Users, groups and entity permissions
 
+This page describes **0.2.0-SNAPSHOT development features**. For local installation, see [Installation](installation.md).
+
 The default `configured` security mode keeps the existing single admin account. To manage multiple admins with Django-style groups and entity permissions, explicitly enable `database` mode and add the optional JDBC identity module. Host application authentication stays separate in both modes.
 
 ## Enable database mode
@@ -105,7 +107,7 @@ Unauthenticated protected requests return 401. Permission denials return 403 wit
 
 `AdminIdentityStore` is the persistence adapter contract. Provide your own bean to use another store instead of the JDBC implementation. `AdminAuthorization` is the core authorization contract; a custom `@Primary` implementation can supply entity-grant decisions while the admin authentication boundary stays separate. Management endpoints remain restricted to the built-in identity service's superusers. Custom implementations must preserve default denial and current-account checks.
 
-`@AdminPermission` is deprecated. Its old role arrays are not enforced and are not converted to grants. Keeping them inert avoids changing existing deployments' access unexpectedly. Use stable `@AdminResource(permissionResource = ...)` identifiers and database groups instead.
+The legacy `@AdminPermission` annotation was removed in 1.0. Its role arrays were never enforced; use stable `@AdminResource(permissionResource = ...)` identifiers and database groups instead.
 
 Existing configured-mode installations retain their account and full entity access within entity restrictions. Earlier upload tickets lack the new owner/operation claims and must be retried after upgrading. Existing authentication/session isolation from host security remains unchanged.
 
@@ -129,3 +131,29 @@ mvn test -pl jpa-admin-identity -am -Dtest=IdentityDatabaseTest -Dsurefire.failI
 ```
 
 To test a real PostgreSQL or MySQL server, set `IDENTITY_TEST_URL`, `IDENTITY_TEST_USER` and `IDENTITY_TEST_PASSWORD` before running the same command. For example, use `jdbc:postgresql://localhost:5432/identity_test` or `jdbc:mysql://localhost:3306/identity_test`. Use a **disposable test database only**: the suite clears all `jpa_admin_*` account/group data between tests. Credentials belong in local environment variables or CI secrets. `.github/workflows/identity-databases.yml` runs the contract against H2 and both database services on relevant changes.
+
+## Mode and dependency behavior
+
+| Mode | Identity module/custom store | Result |
+| --- | --- | --- |
+| `configured` | Neither needed | One configured account; no Users and Groups management |
+| `configured` | JDBC module installed | Still configured mode; no JDBC identity initialization |
+| `database` | JDBC module and supported datasource | Dedicated database accounts and groups |
+| `database` | Custom `AdminIdentityStore` bean | Custom persistence; built-in JDBC bean backs off |
+| `database` | Neither | Startup fails; no fallback to a full-access configured account |
+
+The missing-store message is `Database admin security requires jpa-admin-identity or an AdminIdentityStore bean`. Removing a dependency or changing modes does not delete identity tables. See [database lifecycle](database-setup.md#bootstrap-and-mode-changes) and [custom adapter implementation](custom-identity.md).
+
+## UI details that affect access
+
+- The overview counts admin users, permission groups and superusers. It does not count host-application customers/users.
+- Search Users by username or assigned group; search Groups by group name. Searches filter the loaded lists; account/group management is not server-paginated.
+- Group editing includes entity search, selected-permission count, per-operation checkboxes, custom actions and per-entity Select all. Select all affects that entity, not every row matching the search.
+- Selecting Add, Change, Delete or an action also selects View. Clearing View clears the entity's grants in that group. Other groups can still grant them.
+- Active is separate from Superuser: a disabled superuser cannot enter the admin. Group assignments do not reduce a superuser's access.
+- New account passwords are required; leaving New password empty during an edit preserves the existing hash. There is no forgot-password email flow.
+- Deleting a group removes its assignments and grants, not its users. Deleting a user removes that admin account, not application business records.
+- The final active, admin-enabled superuser cannot be deleted or disabled. Keep a second appropriately controlled superuser for account recovery; there is no built-in password-recovery command.
+- Cancel/Close dismisses the Users and Groups editor without saving. Unlike entity forms, this editor does not currently warn about unsaved changes.
+
+For a complete first-team setup, follow [the practical guide](practical-guide.md#4-create-permission-groups-around-jobs).

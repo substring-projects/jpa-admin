@@ -6,7 +6,7 @@ import { ApiError, getRecord } from '@/api/client';
 import { useEntity } from '@/context/AdminContext';
 import { CellValue, CopyButton } from '@/components/CellValue';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { EntityIcon } from '@/components/DynamicIcon';
+import { EntityIcon, DynamicIcon } from '@/components/DynamicIcon';
 import { ErrorState, NotFound, PageHeader } from '@/components/PageStates';
 import { useLayout } from '@/components/layout/AdminLayout';
 import { useEntityMutations } from '@/hooks/use-entity-mutations';
@@ -43,6 +43,17 @@ function InlineTable({ inline, rows }: { inline: InlineMetadata; rows: Record<st
     return <Empty className="py-10"><EmptyHeader><EmptyTitle className="text-sm">No {inline.title.toLowerCase()}</EmptyTitle>
       <EmptyDescription>Related records will be listed here.</EmptyDescription></EmptyHeader></Empty>;
   }
+  const open = (row: Record<string, unknown>) => target && row[pk] != null
+    && <Button asChild variant="ghost" size="xs"><Link to={`/${target.entityName}/${encodeURIComponent(String(row[pk]))}`}>Open</Link></Button>;
+  if (inline.type === 'STACKED') {
+    return <div className="divide-y">{rows.map((row, index) => <section key={String(row[pk] ?? index)} aria-label={`${inline.title} ${index + 1}`} className="px-6 py-4">
+      <div className="mb-2 flex items-center justify-between"><h4 className="text-xs font-medium text-muted-foreground">#{index + 1}</h4>{open(row)}</div>
+      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        {fields.map(f => <div key={f.name} className="min-w-0"><dt className="text-xs text-muted-foreground">{f.label}</dt>
+          <dd className="mt-1 text-sm"><CellValue field={f} value={row[f.name]} expanded /></dd></div>)}
+      </dl>
+    </section>)}</div>;
+  }
   return <Table>
     <TableHeader><TableRow className="hover:bg-transparent">
       {fields.map((f, i) => <TableHead key={f.name} className={`h-10 text-xs font-medium text-muted-foreground ${i === 0 ? 'pl-6' : ''} ${f.fieldType === 'NUMBER' ? 'text-right' : ''}`}>{f.label}</TableHead>)}
@@ -50,9 +61,7 @@ function InlineTable({ inline, rows }: { inline: InlineMetadata; rows: Record<st
     </TableRow></TableHeader>
     <TableBody>{rows.map((row, index) => <TableRow key={String(row[pk] ?? index)}>
       {fields.map((f, i) => <TableCell key={f.name} className={`max-w-72 ${i === 0 ? 'pl-6' : ''} ${f.fieldType === 'NUMBER' ? 'text-right' : ''}`}><CellValue field={f} value={row[f.name]} /></TableCell>)}
-      {target && <TableCell className="pr-6 text-right">
-        {row[pk] != null && <Button asChild variant="ghost" size="xs"><Link to={`/${target.entityName}/${encodeURIComponent(String(row[pk]))}`}>Open</Link></Button>}
-      </TableCell>}
+      {target && <TableCell className="pr-6 text-right">{open(row)}</TableCell>}
     </TableRow>)}</TableBody>
   </Table>;
 }
@@ -119,7 +128,7 @@ function EntityDetail({ entity, id }: { entity: EntityMetadata; id: string }) {
             {canCreate && <DropdownMenuItem onSelect={() => navigate(`/${entity.entityName}/new?copy=${encodeURIComponent(id)}`)}><Copy />Duplicate</DropdownMenuItem>}
             <DropdownMenuItem onSelect={() => { void navigator.clipboard?.writeText(id); toast.success('ID copied'); }}><ChevronsLeftRight />Copy ID</DropdownMenuItem>
             {rowActions.length > 0 && <DropdownMenuSeparator />}
-            {rowActions.map(action => <DropdownMenuItem key={action.id} onSelect={() => requestAction(action, [rawId])}><Zap />{action.name}</DropdownMenuItem>)}
+            {rowActions.map(action => <DropdownMenuItem key={action.id} onSelect={() => requestAction(action, [rawId])}><DynamicIcon name={action.icon || 'zap'} fallback={Zap} />{action.name}</DropdownMenuItem>)}
             {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => requestDelete([rawId])}><Trash2 />Delete</DropdownMenuItem></>}
           </DropdownMenuContent>
         </DropdownMenu>

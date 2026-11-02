@@ -60,6 +60,23 @@ class JpaAdminSecurityTest {
         mvc.perform(post("/admin/api/Product").session(session).with(csrf())).andExpect(status().isOk());
         mvc.perform(post("/admin/api/auth/logout").session(session)).andExpect(status().isForbidden());
     }
+    private org.springframework.test.web.servlet.request.RequestPostProcessor from(String address) {
+        return request -> { request.setRemoteAddr(address); return request; };
+    }
+    @Test void repeatedFailuresLockSignInForThatUsernameAndAddress() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/admin/api/auth/login").with(csrf()).with(from("10.0.0.1")).param("username", "configured-admin").param("password", "wrong"))
+                    .andExpect(status().isUnauthorized());
+        }
+        // Even the right password is refused while locked, and the response says when to retry.
+        mvc.perform(post("/admin/api/auth/login").with(csrf()).with(from("10.0.0.1")).param("username", "configured-admin").param("password", "test-password"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.code").value("LOGIN_LOCKED"));
+        // Someone else's failures can't lock the real admin out from another address.
+        mvc.perform(post("/admin/api/auth/login").with(csrf()).with(from("10.0.0.2")).param("username", "configured-admin").param("password", "test-password"))
+                .andExpect(status().isNoContent());
+    }
     @Configuration @EnableWebMvc
     static class TestConfiguration {
         @Bean JpaAdminProperties properties() {

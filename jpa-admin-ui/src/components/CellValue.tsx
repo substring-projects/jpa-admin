@@ -33,9 +33,11 @@ interface Props {
 }
 
 export function CellValue({ field, value, expanded = false }: Props) {
+  if (field.sensitive && field.maskPattern === null) return <span className="text-xs text-muted-foreground">Hidden</span>;
   if (value === null || value === undefined || value === '') return <Empty />;
 
-  if (field.sensitive) return <span className="font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>;
+  // The server sends only the configured mask for sensitive values, never the value itself.
+  if (field.sensitive) return <span className="font-mono text-xs tracking-widest text-muted-foreground">{field.maskPattern ?? '••••••••'}</span>;
 
   const mapped = field.badges?.find(b => String(b.value).toLowerCase() === String(value).toLowerCase());
   if (mapped) return <ToneBadge tone={mapped.color}>{mapped.label}</ToneBadge>;
@@ -115,7 +117,8 @@ export function CellValue({ field, value, expanded = false }: Props) {
     if (image) {
       return <a href={text} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} aria-label="Open image" className="block w-fit">
         {/* An explicit height keeps SVGs without intrinsic dimensions from collapsing. */}
-        <img src={text} alt="" loading="lazy" className={cn('rounded border bg-muted', expanded ? 'h-40 w-auto max-w-full object-contain' : 'size-9 object-cover')} />
+        <img src={text} alt="" loading="lazy" className={cn('rounded border bg-muted', expanded ? 'h-40 w-auto max-w-full object-contain' : 'size-9 object-cover')}
+          style={!expanded && field.previewSize ? { width: field.previewSize, height: field.previewSize } : undefined} />
       </a>;
     }
     return <a href={text} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}

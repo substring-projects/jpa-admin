@@ -45,6 +45,31 @@
                 </executions>
             </plugin>
 
+            <!-- dist/ isn't committed: fail instead of packaging a JAR without the console -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>require-ui-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${project.basedir}/dist/index.html</file>
+                                    </files>
+                                    <message>The UI build is missing. Run "npm ci" in jpa-admin-ui and build without -DskipNpmBuild.</message>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Copy dist/ assets to META-INF/resources/admin/ inside JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

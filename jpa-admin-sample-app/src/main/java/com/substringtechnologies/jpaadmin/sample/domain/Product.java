@@ -73,7 +73,12 @@ public class Product {
     @NotNull
     @Min(0)
     @AdminField(label = "Stock Qty", order = 6, sortable = true)
+    @AdminWidget(min = 0, step = 1)
     private Integer stockQuantity;
+
+    @AdminField(label = "Discount (%)", order = 7, inList = false, description = "Applied at checkout")
+    @AdminWidget(type = WidgetType.SLIDER, min = 0, max = 90, step = 5)
+    private Integer discountPercent;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -89,7 +94,7 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     @AdminField(label = "Category", order = 8, filterable = true)
-    @AdminLookup(lookupProperty = "name", searchProperty = "name", quickCreate = true)
+    @AdminLookup(lookupProperty = "name", searchProperty = "name")
     private Category category;
 
     @Column(length = 4000)
@@ -99,7 +104,7 @@ public class Product {
 
     @Column(length = 4000)
     @AdminField(label = "Specifications (JSON)", order = 13, inList = false)
-    @AdminWidget(type = WidgetType.CODE_EDITOR)
+    @AdminWidget(type = WidgetType.CODE_EDITOR, language = "json")
     private String specifications;
 
     @Column(length = 500)
@@ -142,9 +147,25 @@ public class Product {
         return stockQuantity != null && stockQuantity > 0;
     }
 
-    @AdminAction(name = "Publish Product", icon = "check-circle", scope = ActionScope.BOTH)
+    @Transient
+    @AdminComputed(label = "Inventory Value", order = 11, inList = false, format = "$%,.2f")
+    public BigDecimal getInventoryValue() {
+        return price == null || stockQuantity == null ? null : price.multiply(BigDecimal.valueOf(stockQuantity));
+    }
+
+    @AdminAction(name = "Publish Product", icon = "circle-check", scope = ActionScope.BOTH)
     public void publish() {
+        // Shown to the admin as the action's error message.
+        if (status == ProductStatus.ARCHIVED) throw new IllegalStateException("Archived products can't be published");
         this.status = ProductStatus.PUBLISHED;
+    }
+
+    public Integer getDiscountPercent() {
+        return discountPercent;
+    }
+
+    public void setDiscountPercent(Integer discountPercent) {
+        this.discountPercent = discountPercent;
     }
 
     public Long getId() {

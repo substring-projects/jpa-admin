@@ -1,14 +1,14 @@
 # Release guide
 
-<p class="jpa-lead">Build, sign and publish the parent POM and four library modules together. The sample application stays in GitHub and is excluded from Central publication.</p>
+<p class="jpa-lead">Build, sign and publish the parent POM and five library modules together (including optional identity). The sample application stays in GitHub and is excluded from Central publication.</p>
 
-The current development version is `0.2.0-SNAPSHOT`. The latest published release is `0.1.0`, the first Maven Central release; older JitPack tags use a separate version sequence. The project uses [Apache License 2.0](../LICENSE).
+The current development version is `0.2.0-SNAPSHOT`. The latest published release is `0.1.0`, the first Maven Central release. Maven Central is the only distribution channel. The project uses [Apache License 2.0](../LICENSE).
 
 ## Prepare a release
 
-1. Select the release commit. Update the root version and all five module parent references together. Keep library versions aligned.
+1. Select the release commit. Update the root version and all six module parent references together. Keep library versions aligned.
 2. Review configuration, API and compatibility documentation against the release code. Update [What's new](whats-new.md) and installation examples.
-3. Run the checks below. Rebuild and review the tracked `jpa-admin-ui/dist` assets; legacy JitPack builds package them directly.
+3. Run the checks below. The release build compiles the UI from source, so run `npm ci --prefix jpa-admin-ui` first and don't pass `-DskipNpmBuild`.
 4. Run the sample with disposable data. Check login/logout, record browsing, create/update, relations, uploads and custom actions. Test the starter in a separate consumer application.
 5. Keep credentials, private keys and local Maven settings outside Git. Establish a private vulnerability-reporting channel before advertising one.
 
@@ -17,6 +17,7 @@ npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
 ./mvnw clean install
 npm run test:e2e --prefix jpa-admin-ui
+E2E_SECURITY_MODE=database E2E_PORT=18095 npm run test:e2e --prefix jpa-admin-ui -- permissions.spec.ts
 .venv-docs/bin/mkdocs build --strict
 ```
 
@@ -71,6 +72,9 @@ Expected publication:
 | `jpa-admin-ui` | JAR containing compiled UI assets |
 | `jpa-admin-spring-boot-autoconfigure` | JAR |
 | `jpa-admin-spring-boot-starter` | JAR with dependency metadata |
+| `jpa-admin-identity` | Optional JDBC identity adapter and vendor migrations |
+
+For 0.2.x releases, verify the identity artifact independently: it is optional and resolving only the starter does not fetch it. Run the PostgreSQL/MySQL contract workflow before claiming those database configurations are verified.
 
 The sample is excluded through `excludeArtifacts`. Verify that it is absent from the Portal deployment. See the [Central Maven plugin guide](https://central.sonatype.org/publish/publish-portal-maven/) for the publishing lifecycle.
 

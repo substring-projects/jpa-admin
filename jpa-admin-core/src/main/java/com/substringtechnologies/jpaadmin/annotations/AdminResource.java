@@ -22,6 +22,7 @@ public @interface AdminResource {
     boolean exportable() default true;
     String defaultSortBy() default "id";
     SortDir defaultSortDir() default SortDir.DESC;
-    int pageSize() default 25;
+    /** Initial rows per page; {@code 0} uses {@code spring.jpa.admin.page-size}. */
+    int pageSize() default 0;
     boolean hidden() default false;
 }

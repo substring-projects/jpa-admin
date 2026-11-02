@@ -2,6 +2,7 @@ package com.substringtechnologies.jpaadmin.web;
 
 import com.substringtechnologies.jpaadmin.metadata.EntityMetadata;
 import com.substringtechnologies.jpaadmin.metadata.JpaMetamodelScanner;
+import com.substringtechnologies.jpaadmin.service.AdminActionException;
 import com.substringtechnologies.jpaadmin.service.AdminValidationException;
 import com.substringtechnologies.jpaadmin.service.DynamicCrudService;
 import com.substringtechnologies.jpaadmin.service.PageResult;
@@ -17,6 +18,10 @@ import java.util.*;
 @RestController
 @RequestMapping("${spring.jpa.admin.path:/admin}/api")
 public class AdminApiController {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminApiController.class);
+    /** Largest page, lookup or batch the API serves in one request; CSV export pages through at this size. */
+    public static final int MAX_PAGE_SIZE = 500;
+    private static final int MAX_LOOKUP_RESULTS = 100;
 
     private final com.substringtechnologies.jpaadmin.security.AdminAccess access;
     private final JpaMetamodelScanner scanner;
@@ -40,14 +45,14 @@ public class AdminApiController {
 
     @GetMapping("/stats/timeline")
     public ResponseEntity<Map<String, Object>> getTimeline(@RequestParam(defaultValue = "30") int days) {
-        return ResponseEntity.ok(crudService.creationTimeline(days));
+        return ResponseEntity.ok(crudService.creationTimeline(clamp(days, 1, 365)));
     }
 
     @GetMapping("/{entity}")
     public ResponseEntity<PageResult<Map<String, Object>>> list(
             @PathVariable String entity,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String search,
@@ -62,7 +67,9 @@ public class AdminApiController {
             sorting = Sort.by(dir, prop);
         }
 
-        Pageable pageable = PageRequest.of(page, size, sorting);
+        EntityMetadata metadata = scanner.getMetadata(entity);
+        int pageSize = size != null ? size : metadata != null ? metadata.getPageSize() : 25;
+        Pageable pageable = PageRequest.of(Math.max(0, page), clamp(pageSize, 1, MAX_PAGE_SIZE), sorting);
 
         String searchQuery = (q != null && !q.trim().isEmpty()) ? q : search;
 
@@ -111,6 +118,7 @@ public class AdminApiController {
     public ResponseEntity<Map<String, Object>> batchDelete(
             @PathVariable String entity,
             @RequestBody List<Object> ids) {
+        requireBatchSize(ids);
         int count = crudService.batchDelete(entity, ids);
         return ResponseEntity.ok(Map.of("deleted", count));
     }
@@ -119,8 +127,10 @@ public class AdminApiController {
     public ResponseEntity<List<Map<String, Object>>> lookup(
             @PathVariable String entity,
             @RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "20") int limit) {
-        return ResponseEntity.ok(crudService.lookup(entity, q, limit));
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String searchProperty,
+            @RequestParam(required = false) String labelProperty) {
+        return ResponseEntity.ok(crudService.lookup(entity, q, clamp(limit, 1, MAX_LOOKUP_RESULTS), searchProperty, labelProperty));
     }
 
     @PostMapping("/{entity}/actions/{actionId}")
@@ -128,8 +138,17 @@ public class AdminApiController {
             @PathVariable String entity,
             @PathVariable String actionId,
             @RequestBody List<Object> ids) {
+        requireBatchSize(ids);
         Object result = crudService.executeAction(entity, actionId, ids);
         return ResponseEntity.ok(Map.of("success", true, "result", result != null ? result : "Action completed successfully"));
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private static void requireBatchSize(List<Object> ids) {
+        if (ids.size() > MAX_PAGE_SIZE) throw new IllegalArgumentException("Select at most " + MAX_PAGE_SIZE + " records at a time");
     }
 
     @ExceptionHandler(com.substringtechnologies.jpaadmin.security.AdminAccessDeniedException.class)
@@ -162,8 +181,31 @@ public class AdminApiController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(AdminActionException.class)
+    public ResponseEntity<Map<String, String>> handleAction(AdminActionException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+    }
+
+    /** Requests the service rejects with a message written for the admin user. */
+    @ExceptionHandler({IllegalArgumentException.class, UnsupportedOperationException.class})
+    public ResponseEntity<Map<String, String>> handleBadRequest(RuntimeException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "The request is not valid."));
+    }
+
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String, String>> handleMalformed(Exception e) {
+        return ResponseEntity.badRequest().body(Map.of("error", "The request is not valid."));
+    }
+
+    /** Server faults are logged in full; the client gets a generic message, never internal details. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneralError(Exception e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage() != null ? e.getMessage() : "An error occurred"));
+        if (e instanceof org.springframework.web.ErrorResponse response) {
+            // Framework request errors (malformed JSON, wrong method, missing parameter) keep their 4xx status.
+            return ResponseEntity.status(response.getStatusCode()).body(Map.of("error", "The request is not valid."));
+        }
+        log.error("JPA Admin request failed", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Something went wrong on the server. Please try again."));
     }
 }

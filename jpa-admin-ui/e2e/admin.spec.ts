@@ -96,6 +96,21 @@ test('inline rows are edited and saved with the parent', async ({ page }) => {
   await expect(page.getByRole('tabpanel').getByRole('cell', { name: '3', exact: true })).toBeVisible();
 });
 
+test('slider widgets save their value and computed fields use their format', async ({ page }) => {
+  await page.goto('Product/2/edit');
+  const slider = page.getByRole('slider', { name: 'Discount (%)' });
+  await slider.focus();
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(slider).toHaveAttribute('aria-valuenow', '10');
+  await expect(page.locator('[id="field-stockQuantity"]')).toHaveAttribute('min', '0');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page).toHaveURL(/\/Product\/2$/);
+  await expect(page.locator('dt', { hasText: 'Discount (%)' }).locator('xpath=following-sibling::dd')).toHaveText('10');
+  await expect(page.locator('dt', { hasText: 'Inventory Value' }).locator('xpath=following-sibling::dd')).toHaveText(/^\$[\d,]+\.\d{2}$/);
+});
+
 test('many-to-many tags are chosen with a multi-select', async ({ page }) => {
   await page.goto('Product/4/edit');
   await page.locator('[id="field-tags"]').click();

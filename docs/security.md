@@ -18,9 +18,10 @@ sequenceDiagram
 
 1. The console asks `{path}/api/auth/session` whether you're signed in and receives a CSRF token.
 2. Your username and password are checked against the configured account, or a database admin account when database mode is enabled. Password verification uses BCrypt.
-3. A session cookie is issued. Credentials are never stored in the browser.
+3. A session cookie is issued. The application does not persist the submitted password in browser storage.
 4. Every request that changes data must carry the CSRF token, which the console handles automatically.
-5. **Sign out** clears only the admin authentication and admin CSRF token. It preserves the servlet session and any host-app login. An expired session sends you back to the login page.
+5. Repeated failures lock sign-in for that username from that client address (5 failures, 15 minutes by default), and each address has a larger budget across all usernames. A locked attempt gets `429` with `Retry-After`, even with the right password. Another address can still sign in, so an attacker can't lock the real admin out. See [`security.login.*`](configuration.md#security).
+6. **Sign out** clears only the admin authentication and admin CSRF token. It preserves the servlet session and any host-app login. An expired session sends you back to the login page.
 
 ## What's protected
 
@@ -28,7 +29,7 @@ sequenceDiagram
 | --- | --- |
 | UI shell, frontend routes and files (GET/HEAD under `{path}`, excluding `/api`) | Public, so the login page can load. They contain no entity data. |
 | Session status and login (`{path}/api/auth/session`, `/auth/login`) | Accessible before sign-in; login still requires CSRF. |
-| Metadata, records, lookups, stats, actions, uploads (`{path}/api/**`) | Require a signed-in admin (`ROLE_JPA_ADMIN`). |
+| Metadata, records, lookups, stats, actions, uploads (`{path}/api/**`) | Require a valid admin identity; database mode additionally enforces entity/operation grants. |
 | Login, logout and every write | Require a valid CSRF token. |
 | Local upload files (`public-path`) | **Public by URL**, so images can be used in your storefront. See [File uploads](file-uploads.md#security). |
 
@@ -63,7 +64,9 @@ A library cannot override a container filter, an earlier security chain, or reve
 
 - **Validation before save:** Bean Validation runs on every create and update, and rejected changes are rolled back.
 - **Flags enforced on the server:** `readOnly`, `creatable`, `updatable`, `deletable`, inline `canAdd`, `canDelete` and `limit`, read-only fields and primary keys are all checked by the API, not just hidden in the UI.
-- **Sensitive fields** are masked in every response.
+- **Sensitive fields** never leave the server: responses carry only the mask (or nothing), and they can't be searched, filtered, sorted or exported. A form that sends the mask back leaves the stored value unchanged.
+- **Request size limits:** pages, lookups and batch operations are capped at 500 records per request.
+- **Error responses** never include exception details. Unexpected failures are logged on the server and return a generic `500`.
 - **Rich text** is sanitized before display, so stored HTML can't run scripts in the console.
 - **CSV export** escapes cells that spreadsheets would treat as formulas.
 - **Uploads** use signed, expiring tickets, check content, block SVG by default, and are served inert. See [File uploads](file-uploads.md#security).
@@ -72,9 +75,9 @@ A library cannot override a container filter, an earlier security chain, or reve
 
 ## Limits to know
 
-The default `configured` mode has one admin account with full access within entity restrictions. Opt into [database users, groups and permissions](permissions.md) for individual accounts and entity-level authorization. The legacy `@AdminPermission` annotation is deprecated and remains unenforced.
+The default `configured` mode has one admin account with full access within entity restrictions. Opt into [database users, groups and permissions](permissions.md) for individual accounts and entity-level authorization.
 
-- No login rate limiting or account lockout; put the console behind your SSO, VPN or IP allow-list for internet-facing deployments.
+- Sign-in throttling counts failures in memory on each instance. Behind a reverse proxy, set `server.forward-headers-strategy` so the real client address is used; otherwise every request appears to come from the proxy. Put internet-facing consoles behind your SSO, VPN or IP allow-list as well.
 - No audit log of who changed what.
 - Custom actions run arbitrary entity code with admin rights; validate inside the method.
 - The sample app's H2 console (`/h2-console`) is for local demos only and isn't protected by the admin chain.
@@ -110,3 +113,10 @@ CI=1 E2E_CHANNEL=chrome E2E_PORT=18091 E2E_CONTEXT_PATH=/qa E2E_ADMIN_PATH=/inte
 ```
 
 Use `E2E_CHANNEL=chromium` if using Playwright's installed Chromium instead of Chrome. These runs start and stop their own local server. The backend `JpaAdminHostSecurityTest` separately exercises host signed-JWT and session authentication alongside admin authentication, including preservation of host CSRF tokens across admin login/logout.
+
+
+## Mode is an access-policy choice
+
+Configured mode supplies one full-access account within entity restrictions. Database mode supplies individual accounts and group grants; it fails startup if no identity store exists. There is no silent fallback when the optional dependency is removed. See [mode/dependency outcomes](permissions.md#mode-and-dependency-behavior).
+
+API URLs and public frontend assets can be inspected by a browser user. Their visibility is not authorization. Record responses are protected on the backend, including direct API calls that bypass UI buttons. UI-only display options such as hidden columns and export buttons are not permission boundaries.

@@ -18,6 +18,8 @@ export function validateField(field: FieldMetadata, value: unknown, isEdit: bool
     if (Number.isNaN(n)) return `${field.label} must be a number`;
     if (v.min != null && n < v.min) return `Must be at least ${v.min}`;
     if (v.max != null && n > v.max) return `Must be at most ${v.max}`;
+    if (field.min != null && n < field.min) return `Must be at least ${field.min}`;
+    if (field.max != null && n > field.max) return `Must be at most ${field.max}`;
   }
   if (typeof value === 'string') {
     if (v.minLength != null && value.length < v.minLength) return `Must be at least ${v.minLength} characters`;

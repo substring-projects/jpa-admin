@@ -18,7 +18,8 @@ import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 public class JpaAdminSecurityConfiguration {
     @Bean
     @Order(-100)
-    public SecurityFilterChain jpaAdminSecurityFilterChain(HttpSecurity http, JpaAdminProperties properties, AdminIdentityService identity) throws Exception {
+    public SecurityFilterChain jpaAdminSecurityFilterChain(HttpSecurity http, JpaAdminProperties properties, AdminIdentityService identity,
+            LoginAttemptLimiter loginAttempts) throws Exception {
         String path = properties.getPath();
         String api = path + "/api";
         // Keep host authentication and CSRF state intact, even in a shared servlet session.
@@ -32,7 +33,7 @@ public class JpaAdminSecurityConfiguration {
         http.securityMatcher(path, path + "/**")
                 .securityContext(context -> context.securityContextRepository(contexts))
                 .csrf(configurer -> configurer.csrfTokenRepository(csrf))
-                .authenticationManager(new ProviderManager(provider))
+                .authenticationManager(new ProviderManager(loginAttempts.guard(provider)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(api + "/auth/session", api + "/auth/login").permitAll()
                         .requestMatchers(api, api + "/**").access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(identity.canEnterAdmin()))
@@ -43,8 +44,16 @@ public class JpaAdminSecurityConfiguration {
                 .formLogin(form -> form.loginProcessingUrl(api + "/auth/login")
                         .successHandler((request, response, authentication) -> response.setStatus(204))
                         .failureHandler((request, response, exception) -> {
-                            response.setStatus(401);
                             response.setContentType("application/json");
+                            if (exception instanceof LoginAttemptLimiter.LockedException locked) {
+                                long minutes = Math.max(1, (locked.getRetryAfter().toSeconds() + 59) / 60);
+                                response.setStatus(429);
+                                response.setHeader("Retry-After", String.valueOf(Math.max(1, locked.getRetryAfter().toSeconds())));
+                                response.getWriter().write("{\"code\":\"LOGIN_LOCKED\",\"error\":\"Too many failed sign-in attempts. Try again in "
+                                        + minutes + (minutes == 1 ? " minute" : " minutes") + ".\"}");
+                                return;
+                            }
+                            response.setStatus(401);
                             response.getWriter().write("{\"error\":\"Invalid username or password\"}");
                         }))
                 .logout(logout -> logout.logoutUrl(api + "/auth/logout")
@@ -63,6 +72,12 @@ public class JpaAdminSecurityConfiguration {
                 }));
         // Default session-based CSRF protection also covers login and logout.
         return http.build();
+    }
+
+    @Bean
+    public LoginAttemptLimiter jpaAdminLoginAttemptLimiter(JpaAdminProperties properties) {
+        var login = properties.getSecurity().getLogin();
+        return new LoginAttemptLimiter(login.getMaxAttempts(), login.getLockDuration(), java.time.Clock.systemUTC());
     }
 
     @Bean

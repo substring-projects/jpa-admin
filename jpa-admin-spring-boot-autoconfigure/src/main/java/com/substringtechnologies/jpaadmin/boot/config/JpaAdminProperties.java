@@ -51,6 +51,27 @@ public class JpaAdminProperties {
         public void setUsername(String username) { this.username = username; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+
+        private final Login login = new Login();
+        public Login getLogin() { return login; }
+    }
+
+    /** Sign-in throttling: failures are counted per username and client address, and per client address. */
+    public static class Login {
+        /** Failed sign-ins for one username from one address before it is locked. 0 disables throttling. */
+        private int maxAttempts = 5;
+        /** How long a lock lasts, and the window in which failures are counted. */
+        private java.time.Duration lockDuration = java.time.Duration.ofMinutes(15);
+        public int getMaxAttempts() { return maxAttempts; }
+        public void setMaxAttempts(int maxAttempts) {
+            if (maxAttempts < 0) throw new IllegalArgumentException("security.login.max-attempts must be 0 or more");
+            this.maxAttempts = maxAttempts;
+        }
+        public java.time.Duration getLockDuration() { return lockDuration; }
+        public void setLockDuration(java.time.Duration lockDuration) {
+            if (lockDuration == null || lockDuration.isNegative() || lockDuration.isZero()) throw new IllegalArgumentException("security.login.lock-duration must be positive");
+            this.lockDuration = lockDuration;
+        }
     }
 
     /**
@@ -105,7 +126,10 @@ public class JpaAdminProperties {
     public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
 
     public int getPageSize() { return pageSize; }
-    public void setPageSize(int pageSize) { this.pageSize = pageSize; }
+    public void setPageSize(int pageSize) {
+        if (pageSize < 1 || pageSize > 500) throw new IllegalArgumentException("page-size must be between 1 and 500");
+        this.pageSize = pageSize;
+    }
 
     public boolean isExportEnabled() { return exportEnabled; }
     public void setExportEnabled(boolean exportEnabled) { this.exportEnabled = exportEnabled; }

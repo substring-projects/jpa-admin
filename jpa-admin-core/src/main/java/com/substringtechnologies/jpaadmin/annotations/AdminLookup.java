@@ -8,7 +8,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
 public @interface AdminLookup {
+    /** Related record property shown as the label in cells and pickers. */
     String lookupProperty() default "";
+    /** Text property of the related record that the picker searches. */
     String searchProperty() default "";
-    boolean quickCreate() default false;
 }

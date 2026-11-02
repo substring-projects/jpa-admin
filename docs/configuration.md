@@ -1,6 +1,6 @@
 # Configuration
 
-<p class="jpa-lead">Everything is configured under <code>spring.jpa.admin</code> in <code>application.yml</code> or <code>application.properties</code>. Only the admin password is required.</p>
+<p class="jpa-lead">Everything is configured under <code>spring.jpa.admin</code> in <code>application.yml</code> or <code>application.properties</code>. Configured mode requires admin credentials; database mode additionally requires an identity store and initialized schema.</p>
 
 ## A complete example
 
@@ -14,9 +14,14 @@ spring:
       logo-url: /images/acme-logo.svg    # optional; falls back to the built-in mark
       primary-color: "#2563eb"           # optional brand accent (#rrggbb)
       export-enabled: true               # show the CSV Export button
+      page-size: 25                      # rows per page unless @AdminResource(pageSize) is set
       security:
+        mode: configured                 # database for users/groups with an identity store
         username: ${ADMIN_USERNAME:admin}
         password: ${ADMIN_PASSWORD}      # required
+        login:
+          max-attempts: 5                # failed sign-ins before a lock; 0 disables
+          lock-duration: 15m
       storage:                           # only needed for @AdminUpload fields
         default:
           type: local
@@ -34,13 +39,13 @@ All properties use the `spring.jpa.admin.` prefix. Defaults come from [`JpaAdmin
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `enabled` | `true` | Enables the console and its API. `false` registers nothing. |
+| `enabled` | `true` | Enables the console and its API. `false` disables library auto-configuration, including the built-in identity store; it does not drop tables. |
 | `path` | `/admin` | URL prefix of the console. The REST API is served at `{path}/api`. It must start with `/` and have no trailing slash (for example `/backoffice` or `/internal/admin`). The prebuilt UI adapts automatically. |
 | `title` | `Spring Boot JPA Admin` | Name shown on the login page, in the sidebar and in the browser tab. |
 | `logo-url` | *(empty)* | Image shown in the sidebar and on the login page. Absolute URLs and same-site paths both work. A broken image falls back to the built-in mark. |
 | `primary-color` | *(empty)* | Brand accent as a `#rrggbb` hex value. Buttons, links, focus rings, active navigation and the dashboard chart use it, and text on it switches between black and white for contrast. Other formats are ignored. |
 | `export-enabled` | `true` | Shows the **Export** button on tables. Individual entities can opt out with `@AdminResource(exportable = false)`. |
-| `page-size` | `25` | <span class="jpa-pill jpa-pill--no">Not used</span> Bound but not applied. Use `@AdminResource(pageSize = …)` per entity. |
+| `page-size` | `25` | Initial rows per page, 1–500, for entities whose `@AdminResource` doesn't set `pageSize`. The API serves at most 500 rows per request. |
 
 ### Security
 
@@ -50,6 +55,8 @@ All properties use the `spring.jpa.admin.` prefix. Defaults come from [`JpaAdmin
 | `security.initialize-schema` | `false` | Identity module only: detect H2/PostgreSQL/MySQL and initialize the matching V1 schema for local development. Use vendor-specific migrations in production. |
 | `security.username` | `admin` | Configured account username, or the first database superuser bootstrap name. |
 | `security.password` | *(empty)* | **Required in configured mode or when bootstrapping an empty identity database.** BCrypt-encoded; existing database passwords are not overwritten. |
+| `security.login.max-attempts` | `5` | Failed sign-ins for one username from one client address before sign-in is locked. Each address may also fail 4× this across all usernames. `0` turns throttling off. |
+| `security.login.lock-duration` | `15m` | How long a lock lasts, and the window in which failures are counted. |
 
 See [Security](security.md) for how sign-in, sessions and CSRF work.
 
@@ -114,3 +121,18 @@ spring.jpa.admin.storage.default.directory=./uploads
 ## What isn't configurable yet
 
 These come up often and aren't available as properties: per-entity include/exclude lists, a global default page size, and an "audit log" switch. Multiple admin users and groups are available through the optional database mode; see [Permissions](permissions.md). See [Limitations & roadmap](limitations.md).
+
+
+## Configuration precedence and small details
+
+- Set `mode` and `initialize-schema` under `spring.jpa.admin.security`, not directly under `spring.jpa.admin`.
+- Supported mode values are exactly `configured` and `database`; invalid values fail startup.
+- Profile files such as `application-identity-demo.yml` apply only when that profile is active. The sample's normal database mode and its optional seeded-account profile are different experiences.
+- Command-line arguments and environment/run settings can override YAML. Check IDE active profiles and launch arguments when a restart does not use the expected account or port.
+- `ADMIN_PASSWORD` is a variable used by the example placeholder. Without that placeholder, the direct Spring property environment name is `SPRING_JPA_ADMIN_SECURITY_PASSWORD`.
+- Quote colors such as `"#2563eb"`; an unquoted `#` starts a YAML comment. Keep one `spring` mapping when merging snippets.
+- With `server.servlet.context-path: /shop` and admin `path: /backoffice`, open `/shop/backoffice/`. Do not repeat `/shop` inside the admin path.
+- In an initialized identity database, changing bootstrap YAML credentials does not reset stored credentials. If you remove the bootstrap secret, also remove a required `${ADMIN_PASSWORD}` placeholder or change it to an optional `${ADMIN_PASSWORD:}`; otherwise placeholder resolution can still fail.
+- `initialize-schema: false` does not make identity read-only; accounts, grants and coordination still need a writable datasource.
+
+See [database setup](database-setup.md) for complete datasource examples and [mode behavior](permissions.md#mode-and-dependency-behavior) for dependency removal.

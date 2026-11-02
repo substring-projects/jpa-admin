@@ -12,5 +12,6 @@ public @interface AdminComputed {
     int order() default 100;
     boolean inList() default true;
     boolean inDetail() default true;
+    /** {@link java.util.Formatter} pattern applied to the value, such as {@code "%.2f %%"} or {@code "$%,.2f"}. */
     String format() default "";
 }

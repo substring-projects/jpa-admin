@@ -89,8 +89,11 @@ public class JpaAdminAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JpaMetamodelScanner jpaMetamodelScanner(EntityManager entityManager) {
-        return new JpaMetamodelScanner(entityManager);
+    public JpaMetamodelScanner jpaMetamodelScanner(EntityManager entityManager, JpaAdminProperties properties,
+                                                   ObjectProvider<com.substringtechnologies.jpaadmin.config.JpaAdminConfigurer> configurers) {
+        var scanner = new JpaMetamodelScanner(entityManager, configurers.orderedStream().toList());
+        scanner.setDefaultPageSize(properties.getPageSize());
+        return scanner;
     }
 
     @Bean

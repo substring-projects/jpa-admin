@@ -52,8 +52,8 @@ E2E_BASE_URL=http://localhost:8080/backoffice/ npm run test:e2e --prefix jpa-adm
 
 ```bash
 ./mvnw -pl jpa-admin-core test                       # one module
-./mvnw -q install -DskipTests -DskipNpmBuild=true    # Java only, reuse the committed UI build
-./mvnw -pl jpa-admin-ui,jpa-admin-sample-app install -DskipTests   # rebuild the UI and the sample JAR
+./mvnw -q install -DskipTests -DskipNpmBuild=true    # Java only, reuse your last local UI build
+./mvnw -pl jpa-admin-sample-app -am install -DskipTests   # rebuild the UI and the sample JAR
 ```
 
 ## Documentation
@@ -86,3 +86,29 @@ A separate local application can use:
 After changing the library, run `./mvnw install` again, then rebuild and restart
 the consuming application. Reuse this snapshot version during development.
 Keep public installation examples on `0.1.0` until the next release is published.
+
+
+## Seeing UI changes in the running application
+
+There are three separate stages: React source → `dist` → UI JAR inside the consuming application's JAR.
+
+```bash
+npm run build --prefix jpa-admin-ui
+./mvnw package -DskipTests -DskipNpmBuild=true
+```
+
+Stop the old sample process, start the newly packaged sample JAR, then refresh the browser (hard refresh if needed). Do not overwrite a JAR being served and assume the running JVM reloads it. For a separate host application, use `./mvnw install` in the library repository, then rebuild/restart that host. IDE classpaths may resolve installed dependency JARs rather than the reactor's latest `target` output.
+
+Use Vite on port 5173 for hot reload during UI work. The backend on 8080 continues serving packaged assets; browser port matters. Rebuild and commit `dist` with source changes because builds that skip npm use it.
+
+## Identity tests
+
+The default backend suite includes H2 identity contracts and HTTP authorization tests. To test the Users and Groups UI against a fresh database-mode sample:
+
+```bash
+E2E_SECURITY_MODE=database E2E_PORT=18095 npm run test:e2e --prefix jpa-admin-ui -- permissions.spec.ts
+```
+
+Build the sample first. The suite creates/modifies disposable users and groups; do not use `E2E_BASE_URL` to point it at a shared production admin. `E2E_SECURITY_MODE=database` also controls whether permission tests are enabled when supplying an external test URL.
+
+Real PostgreSQL/MySQL contract commands are in [Permissions](permissions.md#run-the-database-contract-tests). The GitHub Actions database workflow runs the same contract on PostgreSQL 18 and MySQL 8.4. H2 compatibility modes alone are not evidence of real-server support.

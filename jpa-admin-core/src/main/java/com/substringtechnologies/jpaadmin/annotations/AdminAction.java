@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface AdminAction {
     String name();
+    /** Lucide icon name, such as {@code "send"} or {@code "archive"}. */
     String icon() default "zap";
     String confirmation() default "";
     ActionScope scope() default ActionScope.BOTH;
