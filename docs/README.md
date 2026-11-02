@@ -10,7 +10,7 @@ hide:
 # Spring Boot JPA Admin
 
 !!! note "Documentation version"
-    Identity, group permissions and multi-database setup describe the **0.2.0-SNAPSHOT source build**. See [installation](installation.md) for the distinction from the 0.1.0 release.
+    Identity, group permissions and multi-database setup describe the **0.2.0 source build**. See [installation](installation.md) for the distinction from the 0.1.0 release.
 
     Start with [practical setup](practical-guide.md), [database configuration](database-setup.md), or [custom identity stores](custom-identity.md).
 
@@ -106,11 +106,11 @@ hide:
 
 ### Add the starter
 
-Add the starter dependency from Maven Central. See [Installation](installation.md) for Maven, Gradle and local builds.
+Use the 0.2.0 coordinates below after publication. Until then, install the prepared source build locally. See [Installation](installation.md) for Maven, Gradle and local builds.
 
 ```kotlin title="build.gradle.kts"
 repositories { mavenCentral() }
-dependencies { implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0") }
+dependencies { implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0") }
 ```
 
 ### Set an admin password

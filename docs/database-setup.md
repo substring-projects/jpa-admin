@@ -1,6 +1,6 @@
 # Identity database setup
 
-This guide covers the optional `jpa-admin-identity` module in the **0.2.0-SNAPSHOT source build**. Build and install the repository first; do not assume these features exist in the documented 0.1.0 release. Keep the starter and identity module on the same version.
+This guide covers the optional `jpa-admin-identity` module in the **0.2.0 source build**. Build and install the repository first; do not assume these features exist in the documented 0.1.0 release. Keep the starter and identity module on the same version.
 
 ## Three separate concepts
 
@@ -20,7 +20,7 @@ Keep the regular starter and add:
 <dependency>
     <groupId>com.substringtechnologies</groupId>
     <artifactId>jpa-admin-identity</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
@@ -28,8 +28,8 @@ Gradle users can use:
 
 ```kotlin
 dependencies {
-    implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0-SNAPSHOT")
-    implementation("com.substringtechnologies:jpa-admin-identity:0.2.0-SNAPSHOT")
+    implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0")
+    implementation("com.substringtechnologies:jpa-admin-identity:0.2.0")
 }
 ```
 

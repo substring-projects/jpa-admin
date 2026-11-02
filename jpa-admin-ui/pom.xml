@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.substringtechnologies</groupId>
         <artifactId>jpa-admin-parent</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
+        <version>0.2.0</version>
     </parent>
 
     <artifactId>jpa-admin-ui</artifactId>
@@ -97,4 +97,44 @@
         </plugins>
     </build>
 
+
+    <!-- Non-Java modules still publish meaningful source and documentation artifacts. -->
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build><plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <configuration><skipSource>true</skipSource></configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <configuration><skip>true</skip></configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-non-java-sources</id><phase>package</phase><goals><goal>jar</goal></goals>
+                            <configuration>
+                                <classifier>sources</classifier>
+                                <classesDirectory>${project.basedir}</classesDirectory>
+                                <includes><include>src/**</include><include>package.json</include><include>package-lock.json</include><include>vite.config.ts</include><include>tsconfig*.json</include><include>index.html</include><include>components.json</include><include>pom.xml</include></includes>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>attach-non-java-documentation</id><phase>package</phase><goals><goal>jar</goal></goals>
+                            <configuration>
+                                <classifier>javadoc</classifier>
+                                <classesDirectory>${project.basedir}/src/release-docs</classesDirectory>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins></build>
+        </profile>
+    </profiles>
 </project>

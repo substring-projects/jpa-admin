@@ -1,21 +1,21 @@
 # What's new
 
-<p class="jpa-lead">Features in <code>0.1.0</code>, the first Maven Central release. Migration notes below compare with the older JitPack tag <code>v1.0.1</code>.</p>
+<p class="jpa-lead">Release notes for <code>0.2.0</code>, followed by historical 0.1.0 notes. Publication of 0.2.0 is pending.</p>
 
-## 0.2.0-SNAPSHOT development updates
+## 0.2.0 release preparation
 
 These changes describe the current source build, not the 0.1.0 release. [Install from source](installation.md) to try them; use matching module versions.
 
 - Optional `jpa-admin-identity` for dedicated admin users, groups, superusers and enforced entity/action permissions.
 - Database detection and migrations for H2/PostgreSQL/MySQL; real-server contracts for PostgreSQL 18 and MySQL 8.4.
 - Users and Groups management with permission matrix, View prerequisites, search, account badges and responsive dialogs.
-- Stable `@AdminResource(permissionResource = ...)` keys; deprecated `@AdminPermission` remains unenforced.
+- Stable `@AdminResource(permissionResource = ...)` keys; `@AdminPermission` has been removed; migrate to database groups.
 - Admin/host security isolation over the whole admin prefix, preserving host authentication on admin logout; servlet-context-aware UI base paths.
 - User-bound upload tickets and server-side checks for relations and owned inline children.
 - Default sample now enables database mode; optional `identity-demo` seeds viewer/editor accounts.
 - Every annotation option now has an effect: `@AdminWidget(min, max, step, language, previewSize)`, `WidgetType.SLIDER`, `InlineType.STACKED`, `@AdminComputed(format)`, `@AdminSensitive(mask, maskPattern)`, `@AdminAction(icon)`, `@AdminLookup(searchProperty)` and the `page-size` property. `JpaAdminConfigurer` beans customize entities in code.
 - Sign-in throttling (`security.login.max-attempts`, `lock-duration`) answers repeated failures with `429`.
-- API hardening: pages, lookups and batches are capped at 500 records; unexpected errors return a generic `500` instead of exception messages; sensitive fields can't be sorted, and a form that sends the mask back no longer overwrites the stored secret.
+- API hardening: pages and batches are capped at 500 records, and lookups at 100 records; unexpected errors return a generic `500` instead of exception messages; sensitive fields can't be sorted, and a form that sends the mask back no longer overwrites the stored secret.
 
 Breaking changes in this build: `@AdminPermission` (never enforced) and `@AdminLookup(quickCreate)` were removed, and `@AdminResource(pageSize)` now defaults to `0`, meaning the global `page-size`. Unexpected server errors are now `500`, and actions that refuse with `IllegalStateException` / `IllegalArgumentException` return `409`, where both used to be `400`.
 

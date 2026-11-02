@@ -1,6 +1,6 @@
 # Build a useful admin console
 
-Start with a small, intentional set of editable data, give people the permissions their work needs, and then add conveniences. This walkthrough connects the configuration, annotations and permission model to a practical catalog-management workflow. Identity features here require the 0.2.0-SNAPSHOT source build.
+Start with a small, intentional set of editable data, give people the permissions their work needs, and then add conveniences. This walkthrough connects the configuration, annotations and permission model to a practical catalog-management workflow. Identity features here require the 0.2.0 source build.
 
 ## 1. Choose an account model
 

@@ -38,6 +38,11 @@ jobs:
       # Builds the UI bundle, compiles for Java 17 and runs every module's tests.
       - name: Build and test
         run: ./mvnw -B -ntp install
+      - name: Verify unsigned release classifiers
+        if: matrix.java == '17'
+        run: |
+          ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests verify
+          python3 scripts/verify_release_artifacts.py --allow-snapshot
       - name: Install browser
         if: matrix.java == '17'
         run: npx playwright install --with-deps chromium

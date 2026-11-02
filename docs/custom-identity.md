@@ -1,6 +1,6 @@
 # Custom identity stores
 
-Use this extension when your application needs a database unsupported by the built-in identity module, a separately managed admin datasource, or another persistence implementation. This guide describes the 0.2.0-SNAPSHOT API.
+Use this extension when your application needs a database unsupported by the built-in identity module, a separately managed admin datasource, or another persistence implementation. This guide describes the 0.2.0 API.
 
 ## Register the persistence adapter
 

@@ -16,9 +16,9 @@ The starter brings Spring Web, Spring Data JPA, Validation and Spring Security.
 
 ## 1. Add the dependency
 
-Use the `com.substringtechnologies` coordinates for the `0.1.0` Maven Central release. Maven uses Central by default; Gradle needs `mavenCentral()`.
+The examples below target **0.2.0**. Its publication is pending; use the source-build tab until artifacts are available on Maven Central. Use `0.1.0` only if you intentionally need the previous release without the new identity features. Maven uses Central by default; Gradle needs `mavenCentral()`.
 
-Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/artifact/com.substringtechnologies/jpa-admin-spring-boot-starter/0.1.0). The parent POM and all four library modules are publicly available. No JitPack repository is needed.
+The release consists of the parent POM and five library modules, including optional identity. Use matching versions. No JitPack repository is supported.
 
 === "Maven"
 
@@ -26,7 +26,7 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
     <dependency>
         <groupId>com.substringtechnologies</groupId>
         <artifactId>jpa-admin-spring-boot-starter</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
     </dependency>
     ```
 
@@ -35,7 +35,7 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
     ```kotlin title="build.gradle.kts"
     repositories { mavenCentral() }
     dependencies {
-        implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0")
+        implementation("com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0")
     }
     ```
 
@@ -44,13 +44,13 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
     ```groovy title="build.gradle"
     repositories { mavenCentral() }
     dependencies {
-        implementation 'com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0'
+        implementation 'com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0'
     }
     ```
 
 === "Built from source"
 
-    Requires JDK 17+, Node.js 20+ and npm. The current development checkout uses `0.2.0-SNAPSHOT`:
+    Requires JDK 17+, Node.js 20+ and npm. The prepared release checkout uses `0.2.0`:
 
     ```bash
     git clone https://github.com/substring-projects/jpa-admin.git
@@ -59,7 +59,7 @@ Version `0.1.0` is published on [Maven Central](https://central.sonatype.com/art
     ./mvnw clean install
     ```
 
-    Then use the same Maven dependency above with `<version>0.2.0-SNAPSHOT</version>`. This version is installed only on your machine. For Gradle local testing, add `mavenLocal()` before `mavenCentral()` and use version `0.2.0-SNAPSHOT`.
+    Then use the same Maven dependency above with `<version>0.2.0</version>`. This version is installed only on your machine. For Gradle local testing, add `mavenLocal()` before `mavenCentral()` and use version `0.2.0`.
 
 The starter downloads core, auto-configuration and UI modules transitively. The UI assets live in the `jpa-admin-ui` JAR; consumers do not build React or install Node.js.
 
@@ -76,9 +76,9 @@ Older JitPack builds used `com.github.substring-projects.jpa-admin`. When migrat
     </dependency>
     ```
 
-## Optional database identity (development version)
+## Optional database identity (0.2.0)
 
-The 0.2.0-SNAPSHOT source build adds `jpa-admin-identity` for dedicated admin users, groups and entity permissions. Install the repository locally and use **the same snapshot version for both starter and identity dependencies**. The starter alone still supports configured-account login. Follow [Identity database setup](database-setup.md) for H2/PostgreSQL/MySQL dependencies and migrations, or [Custom identity stores](custom-identity.md) for another database. These identity features must not be assumed available in 0.1.0.
+The 0.2.0 source build adds `jpa-admin-identity` for dedicated admin users, groups and entity permissions. Install the repository locally and use **the same version for both starter and identity dependencies**. The starter alone still supports configured-account login. Follow [Identity database setup](database-setup.md) for H2/PostgreSQL/MySQL dependencies and migrations, or [Custom identity stores](custom-identity.md) for another database. These identity features must not be assumed available in 0.1.0.
 
 ## 2. Set the admin login
 

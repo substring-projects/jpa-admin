@@ -8,7 +8,7 @@ From the repository root:
 
 ```sh
 mvn package
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --spring.profiles.active=identity-demo
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0.jar --spring.profiles.active=identity-demo
 ```
 
 Open **http://localhost:18093/admin/**.

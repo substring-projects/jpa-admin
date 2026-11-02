@@ -8,7 +8,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - 📖 **Documentation:** [https://substring-projects.github.io/jpa-admin/](https://substring-projects.github.io/jpa-admin/)
 - 👤 **Creator Profile:** [Durgesh Tiwari (@durgeshcoder)](https://github.com/durgeshcoder)
 
-**Published:** `0.1.0` · **Development:** `0.2.0-SNAPSHOT` · **Java:** 17+ · **Spring Boot:** 4.0.0
+**Release preparation:** `0.2.0` (publication pending) · **Previous release:** `0.1.0` · **Java:** 17+ · **Spring Boot:** 4.0.0
 
 [Documentation](https://substring-projects.github.io/jpa-admin/) · [Website setup](docs/publishing-docs.md) · [Installation](docs/installation.md) · [API reference](docs/api-reference.md) · [Contributing](CONTRIBUTING.md)
 
@@ -46,7 +46,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - **Field-Level Validation:** Bean-validation errors from the server appear next to the exact field, including cells in inline rows.
 
 ### 🛡️ Authentication, Permissions & Session Management
-- **Dedicated Admin Identity (0.2.0-SNAPSHOT):** Optional users/groups, entity permissions and H2/PostgreSQL/MySQL persistence, separate from host application users.
+- **Dedicated Admin Identity (0.2.0):** Optional users/groups, entity permissions and H2/PostgreSQL/MySQL persistence, separate from host application users.
 - **Cookie-Backed Authentication:** Dedicated, styled session login portal with configurable administrator credentials.
 - **Automated CSRF Protection:** Seamless CSRF token rotation and validation for all state-changing operations (POST, PUT, DELETE).
 - **Sensitive Field Masking:** Password and secret fields are automatically masked with reveal toggles and protected against accidental blank overwrites.
@@ -80,7 +80,7 @@ Prerequisites: JDK 17+, Node.js 20+, and npm on `PATH`. The included Maven Wrapp
 npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
 ./mvnw clean package
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0.jar
 ```
 
 On Windows, replace `./mvnw` with `mvnw.cmd`.
@@ -124,4 +124,4 @@ Opt into `spring.jpa.admin.security.mode=database` with the optional `jpa-admin-
 | Support another database or a dedicated admin store | [Custom identity stores](docs/custom-identity.md) |
 | Fix missing groups, denied writes or stale UI | [Troubleshooting](docs/troubleshooting.md) |
 
-Identity guides describe the current **0.2.0-SNAPSHOT source build**; do not assume the documented 0.1.0 published artifacts include these features. The normal sample bootstraps only `admin`, with no groups. The optional `identity-demo` profile provides viewer/editor accounts; see [the sample walkthrough](docs/getting-started.md#try-users-and-groups).
+Identity guides describe the current **0.2.0 source build**; do not assume the documented 0.1.0 published artifacts include these features. The normal sample bootstraps only `admin`, with no groups. The optional `identity-demo` profile provides viewer/editor accounts; see [the sample walkthrough](docs/getting-started.md#try-users-and-groups).

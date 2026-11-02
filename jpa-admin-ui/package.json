@@ -1,7 +1,7 @@
 {
   "name": "jpa-admin-ui",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -50,6 +50,6 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.6.3",
-    "vite": "^5.4.9"
+    "vite": "^6.4.5"
   }
 }

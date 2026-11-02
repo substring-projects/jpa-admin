@@ -1,6 +1,6 @@
 # Users, groups and entity permissions
 
-This page describes **0.2.0-SNAPSHOT development features**. For local installation, see [Installation](installation.md).
+This page describes **0.2.0 features (publication pending)**. For local installation, see [Installation](installation.md).
 
 The default `configured` security mode keeps the existing single admin account. To manage multiple admins with Django-style groups and entity permissions, explicitly enable `database` mode and add the optional JDBC identity module. Host application authentication stays separate in both modes.
 
@@ -12,7 +12,7 @@ Add this alongside the starter, using the same library version:
 <dependency>
     <groupId>com.substringtechnologies</groupId>
     <artifactId>jpa-admin-identity</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
@@ -107,7 +107,7 @@ Unauthenticated protected requests return 401. Permission denials return 403 wit
 
 `AdminIdentityStore` is the persistence adapter contract. Provide your own bean to use another store instead of the JDBC implementation. `AdminAuthorization` is the core authorization contract; a custom `@Primary` implementation can supply entity-grant decisions while the admin authentication boundary stays separate. Management endpoints remain restricted to the built-in identity service's superusers. Custom implementations must preserve default denial and current-account checks.
 
-The legacy `@AdminPermission` annotation was removed in 1.0. Its role arrays were never enforced; use stable `@AdminResource(permissionResource = ...)` identifiers and database groups instead.
+The legacy `@AdminPermission` annotation was removed in 0.2.0. Its role arrays were never enforced; use stable `@AdminResource(permissionResource = ...)` identifiers and database groups instead.
 
 Existing configured-mode installations retain their account and full entity access within entity restrictions. Earlier upload tickets lack the new owner/operation claims and must be retried after upgrading. Existing authentication/session isolation from host security remains unchanged.
 

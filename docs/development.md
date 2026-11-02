@@ -22,7 +22,7 @@ npm ci --prefix jpa-admin-ui
 Start the sample backend, then Vite with hot reload:
 
 ```bash
-java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar   # terminal 1
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0.jar   # terminal 1
 npm run dev --prefix jpa-admin-ui                                                 # terminal 2
 ```
 
@@ -66,9 +66,9 @@ python3 -m venv .venv-docs && .venv-docs/bin/pip install -r requirements-docs.tx
 
 See [Documentation website](publishing-docs.md) for the theme and publishing.
 
-## Local development version
+## Prepared release version
 
-The working version is `0.2.0-SNAPSHOT`; the published `0.1.0` remains unchanged.
+The prepared version is `0.2.0`; publication is pending. Local installation does not publish it.
 Run `./mvnw clean install` from the repository root to build and test all modules
 and install them into your local Maven repository. No release profile, GPG signing
 or publishing token is needed.
@@ -79,13 +79,12 @@ A separate local application can use:
 <dependency>
     <groupId>com.substringtechnologies</groupId>
     <artifactId>jpa-admin-spring-boot-starter</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
 After changing the library, run `./mvnw install` again, then rebuild and restart
-the consuming application. Reuse this snapshot version during development.
-Keep public installation examples on `0.1.0` until the next release is published.
+the consuming application. After this release is published, use a new snapshot version for further development rather than overwriting a published release.
 
 
 ## Seeing UI changes in the running application
