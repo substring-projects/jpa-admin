@@ -17,7 +17,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@org.springframework.security.test.context.support.WithMockUser(username = "admin", roles = "JPA_ADMIN")
+@SpringBootTest(properties = "spring.jpa.admin.security.mode=configured")
 class UploadFlowTest {
 
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D, 'I', 'H', 'D', 'R'};

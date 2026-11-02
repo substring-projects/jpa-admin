@@ -134,6 +134,7 @@ nav:
       - File & image uploads: file-uploads.md
       - Branding & theming: branding.md
       - Security: security.md
+      - Users and permissions: permissions.md
   - Reference:
       - Annotations: annotations.md
       - REST API: api-reference.md

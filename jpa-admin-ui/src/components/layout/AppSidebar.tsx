@@ -1,5 +1,5 @@
 import { Link, useMatch, useNavigate } from 'react-router';
-import { ChevronRight, ChevronsUpDown, LayoutDashboard, LogOut, Monitor, Moon, Search, Sun } from 'lucide-react';
+import { ChevronRight, ChevronsUpDown, LayoutDashboard, LogOut, Monitor, Moon, Search, Sun, Users } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useAdmin } from '@/context/AdminContext';
 import { useAuth } from '@/context/AuthContext';
@@ -23,7 +23,7 @@ import { openCommandPalette } from './CommandPalette';
 
 export function AppSidebar() {
   const { metadata, loading, counts } = useAdmin();
-  const { title, logoUrl, username, signOut } = useAuth();
+  const { title, logoUrl, username, signOut, manageSecurity } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isMobile, setOpenMobile } = useSidebar();
   const navigate = useNavigate();
@@ -72,6 +72,10 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
+
+      {manageSecurity && <SidebarGroup><SidebarMenu><SidebarMenuItem><SidebarMenuButton asChild tooltip="Users and groups">
+        <Link to="/_security" onClick={closeMobile}><Users aria-hidden="true" /><span>Users and groups</span></Link>
+      </SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroup>}
 
       {loading && <SidebarGroup><SidebarMenu>{Array.from({ length: 5 }, (_, i) => <SidebarMenuItem key={i}><SidebarMenuSkeleton showIcon /></SidebarMenuItem>)}</SidebarMenu></SidebarGroup>}
 

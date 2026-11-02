@@ -46,8 +46,10 @@ All properties use the `spring.jpa.admin.` prefix. Defaults come from [`JpaAdmin
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `security.username` | `admin` | Username of the single admin account. |
-| `security.password` | *(empty)* | **Required.** Startup fails while it's blank. The password is hashed with BCrypt in memory at startup. |
+| `security.mode` | `configured` | `configured` for the existing account; `database` enables optional [users and groups](permissions.md). |
+| `security.initialize-schema` | `false` | JDBC module only: initialize the V1 identity schema for local development. Use migrations in production. |
+| `security.username` | `admin` | Configured account username, or the first database superuser bootstrap name. |
+| `security.password` | *(empty)* | **Required in configured mode or when bootstrapping an empty identity database.** BCrypt-encoded; existing database passwords are not overwritten. |
 
 See [Security](security.md) for how sign-in, sessions and CSRF work.
 
@@ -111,4 +113,4 @@ spring.jpa.admin.storage.default.directory=./uploads
 
 ## What isn't configurable yet
 
-These come up often and aren't available as properties: multiple admin accounts or roles, per-entity include/exclude lists, a global default page size, and an "audit log" switch. See [Limitations & roadmap](limitations.md).
+These come up often and aren't available as properties: per-entity include/exclude lists, a global default page size, and an "audit log" switch. Multiple admin users and groups are available through the optional database mode; see [Permissions](permissions.md). See [Limitations & roadmap](limitations.md).

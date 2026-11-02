@@ -1,3 +1,4 @@
+import { SecurityView } from '@/views/SecurityView';
 import { createBrowserRouter } from 'react-router';
 import { ADMIN_BASE } from '@/lib/base-path';
 import { AdminLayout } from '@/components/layout/AdminLayout';
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       { index: true, element: <DashboardView /> },
+      { path: '_security', element: <SecurityView /> },
       { path: ':entity', element: <EntityListView /> },
       { path: ':entity/new', element: <EntityFormView /> },
       { path: ':entity/:id', element: <EntityDetailView /> },

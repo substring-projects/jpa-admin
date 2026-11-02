@@ -5,6 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EntityMetadata {
+    private String permissionResource;
+    private java.util.Map<String, Boolean> permissions = new java.util.LinkedHashMap<>();
+    public String getPermissionResource() { return permissionResource == null ? javaClassName : permissionResource; }
+    public void setPermissionResource(String value) { permissionResource = value; }
+    public java.util.Map<String, Boolean> getPermissions() { return permissions; }
+    public void setPermissions(java.util.Map<String, Boolean> value) { permissions = value; }
     private String entityName;
     private String javaClassName;
     private String displayName;

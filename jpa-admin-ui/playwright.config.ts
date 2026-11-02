@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const port = Number(process.env.E2E_PORT || 8090);
 const adminPath = process.env.E2E_ADMIN_PATH || '/admin';
 const contextPath = process.env.E2E_CONTEXT_PATH || '';
+const securityMode = process.env.E2E_SECURITY_MODE || 'configured';
 const baseURL = `http://localhost:${port}${contextPath}${adminPath}/`;
 const jar = '../jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar';
 
@@ -26,7 +27,7 @@ export default defineConfig({
     use: { ...devices['Desktop Chrome'], channel: process.env.E2E_CHANNEL ?? (process.env.CI ? 'chromium' : 'chrome') },
   }],
   webServer: process.env.E2E_BASE_URL ? undefined : {
-    command: `java -jar ${jar} --server.port=${port} --spring.jpa.admin.security.password=admin --spring.jpa.admin.path=${adminPath} --server.servlet.context-path=${contextPath}`,
+    command: `java -jar ${jar} --server.port=${port} --spring.jpa.admin.security.password=admin --spring.jpa.admin.path=${adminPath} --server.servlet.context-path=${contextPath} --spring.jpa.admin.security.mode=${securityMode} --spring.jpa.admin.security.initialize-schema=${securityMode === 'database'}`,
     url: `${baseURL}api/auth/session`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

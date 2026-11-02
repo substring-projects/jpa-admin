@@ -5,7 +5,7 @@ import { LoginView } from '@/views/LoginView';
 import { Loader2 } from 'lucide-react';
 
 export interface Branding { title: string; logoUrl: string }
-interface AuthContextValue extends Branding { username: string; exportEnabled: boolean; signOut: () => Promise<void> }
+interface AuthContextValue extends Branding { username: string; manageSecurity: boolean; exportEnabled: boolean; signOut: () => Promise<void> }
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(''); setSession(next);
     }} />;
   return <AuthContext.Provider value={{
-    ...branding, username: session.username, exportEnabled: session.exportEnabled !== false,
+    ...branding, username: session.username, manageSecurity: session.manageSecurity === true, exportEnabled: session.exportEnabled !== false,
     signOut: async () => { await logout(); setSession({ ...session, authenticated: false, username: '' }); setError(''); },
   }}>{children}</AuthContext.Provider>;
 }

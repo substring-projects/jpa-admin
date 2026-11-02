@@ -17,7 +17,7 @@ sequenceDiagram
 ```
 
 1. The console asks `{path}/api/auth/session` whether you're signed in and receives a CSRF token.
-2. Your username and password are checked against the configured account (stored as a BCrypt hash in memory).
+2. Your username and password are checked against the configured account, or a database admin account when database mode is enabled. Password verification uses BCrypt.
 3. A session cookie is issued. Credentials are never stored in the browser.
 4. Every request that changes data must carry the CSRF token, which the console handles automatically.
 5. **Sign out** clears only the admin authentication and admin CSRF token. It preserves the servlet session and any host-app login. An expired session sends you back to the login page.
@@ -42,7 +42,7 @@ Reserve the configured admin prefix for the library. Do not place application co
 - A host JWT/resource-server chain can remain stateless. The admin uses its own session login and does not accept the host bearer token or automatically reuse the host's users, even if a host user has `ROLE_JPA_ADMIN`.
 - Admin authentication and CSRF tokens use dedicated session attributes, scoped to the configured admin path. Admin login preserves host authentication and its CSRF token. Admin logout clears only admin state and does not delete the shared session cookie or invalidate the HTTP session.
 - The servlet session is still shared infrastructure. Host logout that invalidates the whole session, or session expiry, also removes the admin login. Admin sign-in can rotate the shared session ID as session-fixation protection. This is authentication-context isolation, not separate sessions or a separate deployment.
-- Admin credentials are still required via `spring.jpa.admin.security.username` and `.password`.
+- Configured-mode credentials are required via `spring.jpa.admin.security.username` and `.password`. In database mode they bootstrap an empty identity database; see [permissions](permissions.md).
 
 For a host JWT filter, prefer installing it only in the host `SecurityFilterChain`. If the filter is also a Spring bean, disable automatic servlet registration so it does not execute globally:
 
@@ -72,8 +72,7 @@ A library cannot override a container filter, an earlier security chain, or reve
 
 ## Limits to know
 
-!!! warning "One admin, full access"
-    There is a **single admin account** with access to every entity and action. `@AdminPermission` roles are exposed in metadata but **not enforced** yet. Give console access only to people you trust with all the data the console exposes.
+The default `configured` mode has one admin account with full access within entity restrictions. Opt into [database users, groups and permissions](permissions.md) for individual accounts and entity-level authorization. The legacy `@AdminPermission` annotation is deprecated and remains unenforced.
 
 - No login rate limiting or account lockout; put the console behind your SSO, VPN or IP allow-list for internet-facing deployments.
 - No audit log of who changed what.

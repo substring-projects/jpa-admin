@@ -36,6 +36,15 @@ public class JpaAdminProperties {
     }
 
     public static class Security {
+        private boolean initializeSchema;
+        public boolean isInitializeSchema() { return initializeSchema; }
+        public void setInitializeSchema(boolean value) { initializeSchema = value; }
+        private String mode = "configured";
+        public String getMode() { return mode; }
+        public void setMode(String value) {
+            if (!java.util.Set.of("configured", "database").contains(value)) throw new IllegalArgumentException("security.mode must be configured or database");
+            mode = value;
+        }
         private String username = "admin";
         private String password = "";
         public String getUsername() { return username; }

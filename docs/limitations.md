@@ -4,8 +4,8 @@
 
 ## Access control
 
-- **One admin account** configured in properties. There are no user accounts, password resets or SSO integration.
-- **`@AdminPermission` isn't enforced.** Everyone who signs in can read and change every entity the console exposes (within each entity's `readOnly`, `creatable`, `updatable` and `deletable` flags).
+- **No built-in SSO integration.** Optional [database users and groups](permissions.md) support account management and password resets; configured mode retains one admin account.
+- **Entity-level permissions only.** No row-level or field-level grants or explicit deny rules. The deprecated `@AdminPermission` role arrays remain unenforced; database group permissions are enforced.
 - **No audit log** of who changed what.
 - **No rate limiting** or lockout on login.
 
@@ -46,7 +46,7 @@ Ideas under consideration, roughly in order:
 
 1. Image galleries and multi-file uploads, with reordering.
 2. Change history for records.
-3. Multiple users with roles, enforcing `@AdminPermission`.
+3. Row-level access policies and identity-provider integration.
 4. Quick-create from relation pickers, and paged lookups.
 5. Embedded-object editing.
 

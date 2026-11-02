@@ -9,17 +9,19 @@ import java.util.Map;
 @RestController
 public class JpaAdminSessionController {
     private final JpaAdminProperties properties;
-    public JpaAdminSessionController(JpaAdminProperties properties) { this.properties = properties; }
+    private final AdminIdentityService identity;
+    public JpaAdminSessionController(JpaAdminProperties properties, AdminIdentityService identity) { this.properties = properties; this.identity = identity; }
 
     @GetMapping("${spring.jpa.admin.path:/admin}/api/auth/session")
     public Map<String, Object> session(Authentication authentication, CsrfToken csrf) {
-        boolean authenticated = authentication != null && authentication.isAuthenticated()
-                && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_JPA_ADMIN"));
-        return Map.of("authenticated", authenticated,
+        boolean authenticated = identity.canEnterAdmin();
+        var result = new java.util.LinkedHashMap<String, Object>(Map.of("authenticated", authenticated,
                 "username", authenticated ? authentication.getName() : "",
                 "title", properties.getTitle(), "csrfToken", csrf.getToken(), "csrfHeader", csrf.getHeaderName(),
                 "logoUrl", properties.getLogoUrl() == null ? "" : properties.getLogoUrl(),
                 "primaryColor", properties.getPrimaryColor() == null ? "" : properties.getPrimaryColor(),
-                "exportEnabled", properties.isExportEnabled());
+                "exportEnabled", properties.isExportEnabled()));
+        result.put("manageSecurity", authenticated && identity.isSuperuser() && identity.databaseMode());
+        return result;
     }
 }

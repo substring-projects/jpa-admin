@@ -46,6 +46,11 @@ public class AdminUploadController {
         return body;
     }
 
+    @ExceptionHandler(com.substringtechnologies.jpaadmin.security.AdminAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> denied() {
+        return ResponseEntity.status(403).body(Map.of("code", "ACCESS_DENIED", "error", "You do not have permission to upload this file."));
+    }
+
     @ExceptionHandler(UploadException.class)
     public ResponseEntity<Map<String, String>> handleUpload(UploadException e) {
         return ResponseEntity.status(e.getStatus()).body(Map.of("error", e.getMessage()));

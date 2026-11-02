@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface AdminResource {
+    /** Stable namespaced permission identifier. Defaults to the entity's fully qualified Java class name. */
+    String permissionResource() default "";
     String displayName() default "";
     String pluralName() default "";
     String group() default "General";

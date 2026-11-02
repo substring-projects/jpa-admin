@@ -59,6 +59,7 @@
         <module>jpa-admin-ui</module>
         <module>jpa-admin-spring-boot-autoconfigure</module>
         <module>jpa-admin-spring-boot-starter</module>
+        <module>jpa-admin-identity</module>
         <module>jpa-admin-sample-app</module>
     </modules>
 

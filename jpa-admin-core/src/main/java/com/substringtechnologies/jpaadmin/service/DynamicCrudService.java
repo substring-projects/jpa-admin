@@ -1,6 +1,7 @@
 package com.substringtechnologies.jpaadmin.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.substringtechnologies.jpaadmin.security.*;
 import com.substringtechnologies.jpaadmin.annotations.ActionScope;
 import com.substringtechnologies.jpaadmin.metadata.ActionMetadata;
 import com.substringtechnologies.jpaadmin.metadata.EntityMetadata;
@@ -45,11 +46,13 @@ public class DynamicCrudService {
     private final ObjectMapper objectMapper;
     private final ApplicationContext applicationContext;
     private Validator validator;
+    private final AdminAccess access;
 
     public DynamicCrudService(EntityManager entityManager,
                               JpaMetamodelScanner scanner,
                               ObjectMapper objectMapper,
-                              ApplicationContext applicationContext) {
+                              ApplicationContext applicationContext, AdminAccess access) {
+        this.access = access;
         this.entityManager = entityManager;
         this.scanner = scanner;
         this.objectMapper = objectMapper;
@@ -64,6 +67,12 @@ public class DynamicCrudService {
             Map<String, String> filters) {
 
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "view");
+        for (Sort.Order order : pageable.getSort()) {
+            FieldMetadata sorted = metadata.getField(order.getProperty());
+            if (sorted != null && sorted.getLookupTargetEntity() != null && !sorted.getLookupTargetEntity().isBlank())
+                access.requireView(sorted.getLookupTargetEntity());
+        }
         Class<?> entityClass = loadClass(metadata.getJavaClassName());
 
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
@@ -96,6 +105,7 @@ public class DynamicCrudService {
     @Transactional(readOnly = true)
     public Map<String, Object> getRecord(String entityName, Object rawId) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "view");
         Class<?> entityClass = loadClass(metadata.getJavaClassName());
         Object id = convertId(rawId, metadata);
 
@@ -108,6 +118,7 @@ public class DynamicCrudService {
 
     public Map<String, Object> createRecord(String entityName, Map<String, Object> payload) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "add");
         if (!metadata.isCreatable() || metadata.isReadOnly()) {
             throw new UnsupportedOperationException("Creation is disabled for " + metadata.getDisplayName());
         }
@@ -167,6 +178,7 @@ public class DynamicCrudService {
             if (!(payload.get(prop) instanceof List<?> rows) || inline.getMappedBy() == null || inline.getMappedBy().isEmpty()) continue;
             EntityMetadata childMeta = scanner.getMetadata(inline.getTargetEntity());
             if (childMeta == null) continue;
+            access.require(childMeta, "view");
             if (inline.getLimit() > 0 && rows.size() > inline.getLimit()) {
                 errors.put(prop, "At most " + inline.getLimit() + " rows are allowed");
                 continue;
@@ -193,12 +205,14 @@ public class DynamicCrudService {
                         errors.put(prop, "New " + inline.getTitle().toLowerCase() + " cannot be added");
                         continue;
                     }
+                    access.require(childMeta, "add");
                     child = instantiate(loadClass(childMeta.getJavaClassName()));
                     bindPayload(child, row, childMeta, false, errors, rowPrefix);
                     setFieldValue(child, inline.getMappedBy(), parent);
                     collection.add(child);
                     changes.added().add(child);
                 } else {
+                    access.require(childMeta, "change");
                     bindPayload(child, row, childMeta, true, errors, rowPrefix);
                 }
                 kept.add(child);
@@ -210,6 +224,7 @@ public class DynamicCrudService {
                     errors.put(prop, inline.getTitle() + " cannot be removed");
                     continue;
                 }
+                access.require(childMeta, "delete");
                 collection.remove(child);
                 changes.removed().add(child);
             }
@@ -219,6 +234,7 @@ public class DynamicCrudService {
 
     public Map<String, Object> updateRecord(String entityName, Object rawId, Map<String, Object> payload) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "change");
         if (!metadata.isUpdatable() || metadata.isReadOnly()) {
             throw new UnsupportedOperationException("Update is disabled for " + metadata.getDisplayName());
         }
@@ -246,6 +262,7 @@ public class DynamicCrudService {
 
     public void deleteRecord(String entityName, Object rawId) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "delete");
         if (!metadata.isDeletable() || metadata.isReadOnly()) {
             throw new UnsupportedOperationException("Deletion is disabled for " + metadata.getDisplayName());
         }
@@ -255,6 +272,7 @@ public class DynamicCrudService {
 
         Object entity = entityManager.find(entityClass, id);
         if (entity != null) {
+            authorizeOwnedDeletion(entity, metadata, Collections.newSetFromMap(new IdentityHashMap<>()));
             entityManager.remove(entity);
             entityManager.flush();
         }
@@ -262,10 +280,16 @@ public class DynamicCrudService {
 
     public int batchDelete(String entityName, List<Object> rawIds) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "delete");
         if (!metadata.isDeletable() || metadata.isReadOnly()) {
             throw new UnsupportedOperationException("Deletion is disabled for " + metadata.getDisplayName());
         }
 
+        // Authorize the complete selection before any deletion or lifecycle callback runs.
+        for (Object id : rawIds) {
+            Object entity = entityManager.find(loadClass(metadata.getJavaClassName()), convertId(id, metadata));
+            if (entity != null) authorizeOwnedDeletion(entity, metadata, Collections.newSetFromMap(new IdentityHashMap<>()));
+        }
         int count = 0;
         for (Object id : rawIds) {
             deleteRecord(entityName, id);
@@ -274,9 +298,23 @@ public class DynamicCrudService {
         return count;
     }
 
+    private void authorizeOwnedDeletion(Object entity, EntityMetadata metadata, Set<Object> visited) {
+        if (!visited.add(entity)) return;
+        access.require(metadata, "delete");
+        for (InlineMetadata inline : metadata.getInlines()) {
+            if (inline.getMappedBy() == null || inline.getMappedBy().isBlank()) continue;
+            Object value = getFieldValue(entity, inline.getPropertyName());
+            if (value instanceof Collection<?> children && !children.isEmpty()) {
+                EntityMetadata child = requireMetadata(inline.getTargetEntity());
+                for (Object item : children) authorizeOwnedDeletion(item, child, visited);
+            }
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> lookup(String entityName, String query, int limit) {
         EntityMetadata metadata = requireMetadata(entityName);
+        access.require(metadata, "view");
         Class<?> entityClass = loadClass(metadata.getJavaClassName());
 
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
@@ -342,6 +380,8 @@ public class DynamicCrudService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Action " + actionId + " not found on " + entityName));
 
+        access.require(metadata, "action:" + action.getId());
+
         List<Object> entities = new ArrayList<>();
         for (Object rawId : rawIds) {
             Object id = convertId(rawId, metadata);
@@ -383,6 +423,10 @@ public class DynamicCrudService {
 
     private List<Predicate> buildPredicates(CriteriaBuilder cb, Root<?> root, EntityMetadata metadata, String search, Map<String, String> filters) {
         List<Predicate> predicates = new ArrayList<>();
+        for (String filter : filters == null ? Set.<String>of() : filters.keySet()) {
+            FieldMetadata f = metadata.getField(filter.split("__")[0]);
+            if (f != null && f.getLookupTargetEntity() != null && !f.getLookupTargetEntity().isBlank()) access.requireView(f.getLookupTargetEntity());
+        }
 
         if (search != null && !search.trim().isEmpty()) {
             List<Predicate> searchPreds = new ArrayList<>();
@@ -480,6 +524,9 @@ public class DynamicCrudService {
         }
         if (orders.isEmpty()) {
             String defaultSort = metadata.getDefaultSortBy();
+            FieldMetadata candidate = metadata.getField(defaultSort);
+            if (candidate != null && candidate.getLookupTargetEntity() != null && !candidate.getLookupTargetEntity().isBlank()
+                    && !access.canView(candidate.getLookupTargetEntity())) defaultSort = metadata.getPrimaryKeyField();
             if (metadata.hasField(defaultSort)) {
                 FieldMetadata defField = metadata.getField(defaultSort);
                 if (defField != null && !defField.isComputed()) {
@@ -495,6 +542,7 @@ public class DynamicCrudService {
     public Map<String, Long> countAll() {
         Map<String, Long> counts = new LinkedHashMap<>();
         for (EntityMetadata metadata : scanner.getAllMetadata()) {
+            if (!access.can(metadata, "view")) continue;
             Class<?> entityClass = loadClass(metadata.getJavaClassName());
             counts.put(metadata.getEntityName(), executeCountQuery(entityClass, metadata, null, Map.of()));
         }
@@ -516,10 +564,13 @@ public class DynamicCrudService {
 
     public Map<String, Object> serializeEntity(Object entity, EntityMetadata metadata, boolean includeInlines) {
         if (entity == null) return null;
+        access.require(metadata, "view");
         Map<String, Object> map = new LinkedHashMap<>();
 
         for (FieldMetadata fieldMeta : metadata.getFields()) {
             String prop = fieldMeta.getName();
+            if (fieldMeta.getLookupTargetEntity() != null && !fieldMeta.getLookupTargetEntity().isBlank()
+                    && !access.canView(fieldMeta.getLookupTargetEntity())) continue;
 
             // Computed virtual method
             if (fieldMeta.isComputed()) {
@@ -580,6 +631,7 @@ public class DynamicCrudService {
         // Inline relationship serialization (e.g. Order Items inside Order)
         if (includeInlines && !metadata.getInlines().isEmpty()) {
             for (InlineMetadata inline : metadata.getInlines()) {
+                if (!access.canView(inline.getTargetEntity())) continue;
                 Object relCol = getFieldValue(entity, inline.getPropertyName());
                 if (relCol instanceof Collection<?> col) {
                     EntityMetadata childMeta = scanner.getMetadata(inline.getTargetEntity());
@@ -629,6 +681,7 @@ public class DynamicCrudService {
 
         Map<String, List<Long>> series = new LinkedHashMap<>();
         for (EntityMetadata metadata : scanner.getAllMetadata()) {
+            if (!access.can(metadata, "view")) continue;
             FieldMetadata stamp = metadata.getFields().stream()
                     .filter(f -> !f.isComputed() && isCreationTimestampField(f.getName())
                             && (f.getFieldType() == FieldType.DATE_TIME || f.getFieldType() == FieldType.DATE))
@@ -684,6 +737,8 @@ public class DynamicCrudService {
             if (isUpdate && (fieldMeta.isReadOnly() || isCreationTimestampField(prop))) continue;
             if (fieldMeta.getFieldType() == FieldType.RELATION_ONE_TO_MANY) continue;
 
+            if (fieldMeta.getLookupTargetEntity() != null && !fieldMeta.getLookupTargetEntity().isBlank())
+                access.requireView(fieldMeta.getLookupTargetEntity());
             Object rawVal = payload.get(prop);
             try {
                 switch (fieldMeta.getFieldType()) {

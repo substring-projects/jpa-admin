@@ -1,6 +1,9 @@
 package com.substringtechnologies.jpaadmin.boot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.substringtechnologies.jpaadmin.security.*;
+import com.substringtechnologies.jpaadmin.boot.config.AdminIdentityService;
+import com.substringtechnologies.jpaadmin.boot.config.AdminIdentityController;
 import com.substringtechnologies.jpaadmin.boot.config.JpaAdminProperties;
 import com.substringtechnologies.jpaadmin.boot.config.JpaAdminWebMvcConfigurer;
 import com.substringtechnologies.jpaadmin.metadata.JpaMetamodelScanner;
@@ -33,6 +36,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableConfigurationProperties(JpaAdminProperties.class)
 public class JpaAdminAutoConfiguration {
 
+    @Bean @ConditionalOnMissingBean
+    public AdminAccess adminAccess(JpaMetamodelScanner scanner, AdminAuthorization identity) {
+        return new AdminAccess(scanner, identity);
+    }
+    @Bean
+    public AdminIdentityController adminIdentityController(AdminIdentityService identity, AdminAccess access) {
+        return new AdminIdentityController(identity, access);
+    }
+
     @Bean
     @ConditionalOnMissingBean
     public JpaAdminWebMvcConfigurer jpaAdminWebMvcConfigurer(JpaAdminProperties properties, StorageRegistry storages) {
@@ -53,8 +65,8 @@ public class JpaAdminAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public UploadService jpaAdminUploadService(JpaMetamodelScanner scanner, StorageRegistry storages, UploadTokens tokens) {
-        return new UploadService(scanner, storages, tokens);
+    public UploadService jpaAdminUploadService(JpaMetamodelScanner scanner, StorageRegistry storages, UploadTokens tokens, AdminAccess access) {
+        return new UploadService(scanner, storages, tokens, access);
     }
 
     @Bean
@@ -86,14 +98,14 @@ public class JpaAdminAutoConfiguration {
     public DynamicCrudService dynamicCrudService(EntityManager entityManager,
                                                  JpaMetamodelScanner scanner,
                                                  org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
-                                                 ApplicationContext applicationContext) {
+                                                 ApplicationContext applicationContext, AdminAccess access) {
         ObjectMapper mapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        return new DynamicCrudService(entityManager, scanner, mapper, applicationContext);
+        return new DynamicCrudService(entityManager, scanner, mapper, applicationContext, access);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public AdminApiController adminApiController(JpaMetamodelScanner scanner, DynamicCrudService dynamicCrudService) {
-        return new AdminApiController(scanner, dynamicCrudService);
+    public AdminApiController adminApiController(JpaMetamodelScanner scanner, DynamicCrudService dynamicCrudService, AdminAccess access) {
+        return new AdminApiController(scanner, dynamicCrudService, access);
     }
 }

@@ -150,13 +150,15 @@ On a field. Masks the value in responses, hides it from tables, and uses a maske
 | `mask` | `boolean` | `true` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Sensitive values are always masked. |
 | `maskPattern` | `String` | `"••••••••"` | <span class="jpa-pill jpa-pill--no">Not yet</span> | The mask is always `••••••••`. |
 
+Set `@AdminResource(permissionResource = "catalog.Product")` for a stable permission namespace; the default is the fully qualified entity class name. See [Permissions](permissions.md).
+
 ## @AdminPermission
 
 On an entity class.
 
 | Option | Type | Default | Status | Description |
 | --- | --- | --- | --- | --- |
-| `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles` | `String[]` | `{}` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Exposed in metadata but not enforced. The console has a single admin account; see [Security](security.md). |
+| `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles` | `String[]` | `{}` | Deprecated | Deprecated and not enforced. Use [database groups and permissions](permissions.md). Only `roles` is copied to legacy metadata. |
 
 ## Enums
 

@@ -69,7 +69,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 ### 🔌 Headless REST Management API
 - **Exposed REST Endpoints:** Complete API exposed under `/admin/api/**` providing metadata introspection (`/admin/api/metadata`) and CRUD operations for programmatic integration.
 
-This initial release is intended for trusted administrators. Granular permissions and comprehensive server-side field restrictions are incomplete. Read [security](docs/security.md) and [feature limitations](docs/limitations.md) before exposing application data. CSV export and editable inline collections are supported; XLSX export is not.
+Configured mode gives one trusted administrator full access. Optional database mode enforces entity permissions through users and groups; row-level and field-level permission grants are not implemented. Read [security](docs/security.md) and [feature limitations](docs/limitations.md) before exposing application data. CSV export and editable inline collections are supported; XLSX export is not.
 
 ## Run the sample
 
@@ -107,3 +107,7 @@ Created and maintained by **[Durgesh Tiwari](https://github.com/durgeshcoder)** 
 ### Using your own Spring Security or JWT authentication
 
 The admin owns its configured path (default `/admin/**`) with a security chain at order `-100`, including its UI assets. Your APIs keep their own security chains and authentication. Admin authentication and CSRF state are isolated from the host login; admin logout preserves the host session. Reserve the admin prefix, order host chains after it or exclude it, and keep custom JWT filters out of global servlet registration. See [security integration](docs/security.md#coexisting-with-host-spring-security) for examples and shared-session limits.
+
+### Database admin users and groups
+
+Opt into `spring.jpa.admin.security.mode=database` with the optional `jpa-admin-identity` module for users, groups, and enforced entity permissions. The default configured account remains supported. See [setup, permission semantics, migration and API contract](docs/permissions.md).

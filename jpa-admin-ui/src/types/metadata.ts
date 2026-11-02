@@ -120,6 +120,8 @@ export interface ActionMetadata {
 }
 
 export interface EntityMetadata {
+  permissionResource?: string;
+  permissions?: Record<string, boolean>;
   entityName: string;
   javaClassName: string;
   displayName: string;

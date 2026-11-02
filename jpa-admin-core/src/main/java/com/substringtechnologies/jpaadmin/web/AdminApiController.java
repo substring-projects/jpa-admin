@@ -18,17 +18,19 @@ import java.util.*;
 @RequestMapping("${spring.jpa.admin.path:/admin}/api")
 public class AdminApiController {
 
+    private final com.substringtechnologies.jpaadmin.security.AdminAccess access;
     private final JpaMetamodelScanner scanner;
     private final DynamicCrudService crudService;
 
-    public AdminApiController(JpaMetamodelScanner scanner, DynamicCrudService crudService) {
+    public AdminApiController(JpaMetamodelScanner scanner, DynamicCrudService crudService, com.substringtechnologies.jpaadmin.security.AdminAccess access) {
+        this.access = access;
         this.scanner = scanner;
         this.crudService = crudService;
     }
 
     @GetMapping("/metadata")
     public ResponseEntity<Collection<EntityMetadata>> getMetadata() {
-        return ResponseEntity.ok(scanner.getAllMetadata());
+        return ResponseEntity.ok(access.metadata());
     }
 
     @GetMapping("/stats")
@@ -128,6 +130,11 @@ public class AdminApiController {
             @RequestBody List<Object> ids) {
         Object result = crudService.executeAction(entity, actionId, ids);
         return ResponseEntity.ok(Map.of("success", true, "result", result != null ? result : "Action completed successfully"));
+    }
+
+    @ExceptionHandler(com.substringtechnologies.jpaadmin.security.AdminAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> denied() {
+        return ResponseEntity.status(403).body(Map.of("code", "ACCESS_DENIED", "error", "You do not have permission to perform this operation."));
     }
 
     @ExceptionHandler(AdminValidationException.class)

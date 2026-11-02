@@ -42,6 +42,7 @@ public class JpaMetamodelScanner {
     @PostConstruct
     public void scan() {
         Metamodel metamodel = entityManager.getMetamodel();
+        java.util.Set<String> permissionResources = new java.util.HashSet<>();
         for (EntityType<?> entityType : metamodel.getEntities()) {
             Class<?> javaType = entityType.getJavaType();
             if (javaType == null) continue;
@@ -56,6 +57,8 @@ public class JpaMetamodelScanner {
             metadata.setJavaClassName(javaType.getName());
 
             if (resourceAnn != null) {
+                if (hasText(resourceAnn.permissionResource())) metadata.setPermissionResource(resourceAnn.permissionResource());
+                if (hasText(resourceAnn.permissionResource()) && !resourceAnn.permissionResource().matches("[A-Za-z0-9_.-]+")) throw new IllegalStateException("Invalid permission resource: " + metadata.getPermissionResource());
                 metadata.setDisplayName(hasText(resourceAnn.displayName()) ? resourceAnn.displayName() : humanize(entityType.getName()));
                 metadata.setPluralName(hasText(resourceAnn.pluralName()) ? resourceAnn.pluralName() : metadata.getDisplayName() + "s");
                 metadata.setGroup(resourceAnn.group());
@@ -76,6 +79,8 @@ public class JpaMetamodelScanner {
                 metadata.setIcon("database");
                 metadata.setOrder(100);
             }
+
+            if (!permissionResources.add(metadata.getPermissionResource())) throw new IllegalStateException("Duplicate permission resource: " + metadata.getPermissionResource());
 
             AdminPermission permAnn = javaType.getAnnotation(AdminPermission.class);
             if (permAnn != null && permAnn.roles().length > 0) {
