@@ -1,10 +1,10 @@
 # Using the console
 
-<p class="jpa-lead">A tour of everything the console does, from signing in to bulk actions. Everything here works for every entity, with no code.</p>
+<p class="jpa-lead">A tour of everything the console does, from signing in to bulk actions. Available controls depend on your permissions, entity configuration and supported field types.</p>
 
 ## Sign in
 
-Open `{path}/` (by default `/admin/`) and sign in with the admin username and password from your [configuration](configuration.md). The session lasts until you sign out or it expires; an expired session returns you to the login screen.
+Open `{path}/` (by default `/admin/`) and sign in with the configured admin account or the dedicated admin account assigned to you in database mode. Host-app credentials do not automatically work here. The session lasts until you sign out or it expires; an expired session returns you to the login screen.
 
 <figure markdown>
 ![Login page](assets/images/login.png){ .jpa-screenshot width="720" loading=lazy }
@@ -14,7 +14,7 @@ Open `{path}/` (by default `/admin/`) and sign in with the admin username and pa
 
 ### Sidebar
 
-- **Groups.** Entities are grouped by `@AdminResource(group = …)`. Click a group heading to collapse it; your choice is remembered.
+- **Entity groups.** Entities are grouped by `@AdminResource(group = …)`. Click a group heading to collapse it; your choice is remembered.
 - **Record counts** appear next to each entity.
 - **Icons** come from `@AdminResource(icon = …)`. Without one, a fitting icon is picked from the entity name (orders get a cart, users get people, and so on).
 - **Collapse** the sidebar to icons with the button in the header, or ++cmd+b++ / ++ctrl+b++. On phones it opens as a drawer.
@@ -236,3 +236,16 @@ Choose **Light**, **Dark** or **System** from the account menu or the command pa
 ## What's stored in your browser
 
 Some preferences live only in your browser (`localStorage`) and don't sync between devices or users: the theme, collapsed sidebar groups, hidden columns, row density, saved views and recently viewed records.
+
+
+## Manage admin users and groups
+
+Database superusers see **Users and groups** with a people icon in the sidebar. The screen includes summary counts, searchable Users/Groups tabs, account status, access level, group badges, member counts and edit/delete actions.
+
+- Use **Add group** to choose entity permissions from a matrix. Search narrows entities without clearing existing selections. Per-entity Select all includes that entity's custom actions. Write/action selection enables View; clearing View clears the entity's grants in that group.
+- Use **Add user** to create a dedicated admin account and assign groups. Active and Allow admin access control entry. Superuser enables security management and bypasses group assignment, while retaining entity hard restrictions.
+- Edit a user to change groups, disable access or set a new password. Leave the password blank to keep it. Effective assigned permissions shows the combined group grants; it is not a per-user override editor.
+- Delete a group to revoke its grants from members. The users themselves remain. Deleting an account removes only the dedicated admin identity.
+- Save/Cancel remain visible while dialog contents scroll. On a narrow screen, scroll the permission table horizontally to reach all columns. Close/Cancel discards the current editor without saving; there is no unsaved-change prompt for this screen.
+
+If the screen is missing, check database mode and your superuser status. An empty group list is normal on a fresh installation. The library does not create job-specific groups automatically. See [the practical setup guide](practical-guide.md) for a reader/editor example.

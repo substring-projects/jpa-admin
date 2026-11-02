@@ -9,6 +9,11 @@ hide:
 
 # Spring Boot JPA Admin
 
+!!! note "Documentation version"
+    Identity, group permissions and multi-database setup describe the **0.2.0-SNAPSHOT source build**. See [installation](installation.md) for the distinction from the 0.1.0 release.
+
+    Start with [practical setup](practical-guide.md), [database configuration](database-setup.md), or [custom identity stores](custom-identity.md).
+
 ## Everything an admin console needs, out of the box { .jpa-center }
 
 <p class="jpa-section-intro">Your JPA entities become a full console at startup. Annotations fine-tune it when you want more control, and everything else just works.</p>

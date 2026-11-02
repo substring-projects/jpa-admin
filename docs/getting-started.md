@@ -1,6 +1,6 @@
 # Run the sample
 
-<p class="jpa-lead">The repository includes a demo shop (products, categories, tags, customers and orders) with every feature switched on. It's the fastest way to see the console.</p>
+<p class="jpa-lead">The repository includes a demo shop (products, categories, tags, customers and orders) with examples of CRUD, relationships, uploads and admin identity. It's the fastest way to see the console.</p>
 
 ## Requirements
 
@@ -86,3 +86,32 @@ java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --
 ```
 
 To work on the UI with live reload, see [Development](development.md#frontend-development).
+
+
+## Try Users and Groups
+
+The normal sample run explicitly sets `security.mode: database` and `initialize-schema: true`. It uses `jpa-admin-identity` and bootstraps `admin` / `admin` unless the environment overrides those values. It creates **no permission groups by default**.
+
+1. Open **Users and groups** in the sidebar as `admin`.
+2. Open Groups and choose **Create first group**. Name it `Product Readers` and select Product View.
+3. Open Users and choose **Add user**. Enter a username and a password of at least 12 characters (at most 72 UTF-8 bytes).
+4. Leave Active account and Allow admin access enabled, leave Superuser disabled, and assign Product Readers.
+5. Sign in as that user in an incognito window. Products should be readable; create/edit/delete should not be allowed. Related categories/tags require their own View grants.
+
+For pre-seeded reader/editor accounts, use the optional profile:
+
+```bash
+java -jar jpa-admin-sample-app/target/jpa-admin-sample-app-0.2.0-SNAPSHOT.jar --spring.profiles.active=identity-demo
+```
+
+Open **http://localhost:18093/admin/**. This profile binds to loopback and uses a separate in-memory database.
+
+| Account | Local demo password | Access |
+| --- | --- | --- |
+| `admin` | `admin-demo-123` | Superuser |
+| `viewer` | `viewer-demo-123` | Product View |
+| `editor` | `editor-demo-123` | Product View/Add/Change; Category/Tag View |
+
+`ADMIN_USERNAME`/`ADMIN_PASSWORD` override the initial superuser credentials; viewer/editor credentials are fixed only in this explicit demo profile. Stop another process on port 18093 or supply `--server.port=18094` if needed. Normal startup on port 8080 does not seed these extra accounts. Both sample profiles lose database records and identity changes on process restart.
+
+To compare single-account mode, start with `--spring.jpa.admin.security.mode=configured`. Users and Groups will not be available. Do not switch a production installation to this mode merely to bypass an access problem: its configured account has full entity access within entity restrictions.

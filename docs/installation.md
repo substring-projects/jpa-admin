@@ -76,9 +76,13 @@ Older JitPack builds used `com.github.substring-projects.jpa-admin`. When migrat
     </dependency>
     ```
 
+## Optional database identity (development version)
+
+The 0.2.0-SNAPSHOT source build adds `jpa-admin-identity` for dedicated admin users, groups and entity permissions. Install the repository locally and use **the same snapshot version for both starter and identity dependencies**. The starter alone still supports configured-account login. Follow [Identity database setup](database-setup.md) for H2/PostgreSQL/MySQL dependencies and migrations, or [Custom identity stores](custom-identity.md) for another database. These identity features must not be assumed available in 0.1.0.
+
 ## 2. Set the admin login
 
-The starter refuses to start without a password, so there is no insecure default.
+In default configured mode, the starter refuses to start without a password. In database mode, credentials bootstrap only an empty identity store. There is no usable default password in the library.
 
 === "application.yml"
 

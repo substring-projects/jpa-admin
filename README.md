@@ -32,7 +32,7 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 
 ### ⚡ Instant JPA Entity Discovery & Full CRUD
 - **Zero-Configuration Metamodel Introspection:** Automatically scans and discovers all JPA `@Entity` classes at boot time without boilerplate code.
-- **Dynamic Data Grids:** Server-side pagination, adjustable page sizes, multi-column sorting, and debounce-optimized full-text search.
+- **Dynamic Data Grids:** Server-side pagination, adjustable page sizes, multi-column sorting, and debounced text-field search.
 - **Filters & Saved Views:** Text, enum and boolean filters, searchable relation filters, and min/max or from/to ranges for numbers and dates. Filters show as removable chips, and any search/filter/sort combination can be saved as a named view.
 - **Edit in Place:** Change a status, number, date or relation straight from the table without opening the form.
 - **Smart Form Generation:** Type-aware form controls for string inputs, text areas, datetime formatters, toggle switches for booleans, and enum selects.
@@ -45,7 +45,8 @@ A Spring Boot starter that discovers JPA entities and generates an administratio
 - **File & Image Uploads:** `@AdminUpload` adds drag-and-drop uploads with previews, live progress (percentage, speed, time left) and cancel. Files go to a local folder, Amazon S3 (or MinIO/R2) or ImageKit, chosen in configuration.
 - **Field-Level Validation:** Bean-validation errors from the server appear next to the exact field, including cells in inline rows.
 
-### 🛡️ Built-in Enterprise Security & Session Management
+### 🛡️ Authentication, Permissions & Session Management
+- **Dedicated Admin Identity (0.2.0-SNAPSHOT):** Optional users/groups, entity permissions and H2/PostgreSQL/MySQL persistence, separate from host application users.
 - **Cookie-Backed Authentication:** Dedicated, styled session login portal with configurable administrator credentials.
 - **Automated CSRF Protection:** Seamless CSRF token rotation and validation for all state-changing operations (POST, PUT, DELETE).
 - **Sensitive Field Masking:** Password and secret fields are automatically masked with reveal toggles and protected against accidental blank overwrites.
@@ -111,3 +112,16 @@ The admin owns its configured path (default `/admin/**`) with a security chain a
 ### Database admin users and groups
 
 Opt into `spring.jpa.admin.security.mode=database` with the optional `jpa-admin-identity` module for users, groups, and enforced entity permissions on H2, PostgreSQL or MySQL 8.0+. The default configured account remains supported. See [setup, permission semantics, migration and API contract](docs/permissions.md).
+
+
+## Choose your next step
+
+| Goal | Guide |
+| --- | --- |
+| Make the console useful for your team | [Practical setup and best use](docs/practical-guide.md) |
+| Configure H2, PostgreSQL or MySQL identities | [Identity database setup](docs/database-setup.md) |
+| Understand modes, dependency removal and group grants | [Users and permissions](docs/permissions.md) |
+| Support another database or a dedicated admin store | [Custom identity stores](docs/custom-identity.md) |
+| Fix missing groups, denied writes or stale UI | [Troubleshooting](docs/troubleshooting.md) |
+
+Identity guides describe the current **0.2.0-SNAPSHOT source build**; do not assume the documented 0.1.0 published artifacts include these features. The normal sample bootstraps only `admin`, with no groups. The optional `identity-demo` profile provides viewer/editor accounts; see [the sample walkthrough](docs/getting-started.md#try-users-and-groups).

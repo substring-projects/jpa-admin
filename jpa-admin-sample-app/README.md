@@ -30,3 +30,8 @@ Open **http://localhost:18093/admin/**.
 5. Restore the grant, disable the user or reset its password to explore the other access controls.
 
 These are dedicated admin accounts in the `jpa_admin_*` tables, independent of any host application's users or JWT login. See [the permissions guide](../docs/permissions.md) for production migrations and the complete API contract.
+
+
+Normal startup creates only the bootstrap superuser, with no groups. The `identity-demo` profile is required for the seeded viewer/editor accounts above. YAML bootstrap credentials do not reset existing accounts; sample restart creates a new in-memory database, which is why bootstrap runs again.
+
+For your own application, use [the practical setup guide](../docs/practical-guide.md), [database-specific configuration](../docs/database-setup.md), and [custom identity adapters](../docs/custom-identity.md). If a UI change is missing, rebuild the frontend and repackage/restart the sample; see [development instructions](../docs/development.md#seeing-ui-changes-in-the-running-application).
