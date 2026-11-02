@@ -2,6 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent><groupId>com.substringtechnologies</groupId><artifactId>jpa-admin-parent</artifactId><version>0.2.0</version></parent>
   <artifactId>jpa-admin-identity</artifactId>
+  <name>JPA Admin Identity</name>
   <description>Optional database-backed admin users, groups and permission grants</description>
   <dependencies>
     <dependency><groupId>com.substringtechnologies</groupId><artifactId>jpa-admin-core</artifactId></dependency>

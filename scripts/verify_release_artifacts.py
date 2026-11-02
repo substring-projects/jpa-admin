@@ -22,6 +22,7 @@ modules = [item.text for item in parent.findall("m:modules/m:module", NS)]
 for module in modules:
     pom = ET.parse(ROOT / module / "pom.xml").getroot()
     assert pom.findtext("m:parent/m:version", namespaces=NS) == version, module
+    assert pom.findtext("m:name", namespaces=NS), f"Missing Central project name: {module}"
     if module == "jpa-admin-sample-app":
         continue
     for suffix in ("", "-sources", "-javadoc"):
