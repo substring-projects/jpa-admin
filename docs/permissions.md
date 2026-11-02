@@ -25,7 +25,17 @@ spring:
         initialize-schema: false
 ```
 
-Apply the bundled `jpa-admin/migrations/V1__admin_identity.sql` using your application's migration process before starting. It creates dedicated JDBC tables, not JPA entities, so the generic entity APIs cannot expose users or password hashes. The DDL targets H2 and PostgreSQL syntax; automated database tests currently use H2. Verify migrations and locking on your production database before rollout. The module does not automatically register a Flyway migration location or alter the host's Hibernate configuration.
+The built-in identity store supports H2, PostgreSQL and MySQL 8.0+. Database selection is automatic from JDBC metadata; no additional vendor property is required. The host supplies its datasource and JDBC driver. Integration coverage runs against H2, PostgreSQL 18 and MySQL 8.4, including real foreign keys, rollback and concurrent last-superuser protection.
+
+| Database | Host JDBC dependency | Production migration resource |
+| --- | --- | --- |
+| H2 | `com.h2database:h2` | `jpa-admin/migrations/V1__admin_identity.sql` |
+| PostgreSQL | `org.postgresql:postgresql` | `jpa-admin/migrations/V1__admin_identity.sql` |
+| MySQL 8.0+ | `com.mysql:mysql-connector-j` | `jpa-admin/migrations/mysql/V1__admin_identity.sql` |
+
+Apply only the migration for your database using your application's migration process before starting. These are dedicated JDBC tables, not JPA entities, so generic entity APIs cannot expose accounts or password hashes. The module does not automatically register a Flyway location or alter the host's Hibernate configuration. The original H2/PostgreSQL V1 is unchanged for existing migration checksums.
+
+The MySQL migration explicitly uses InnoDB, foreign-key constraints and UTF-8 binary collation, keeping usernames, group names and permission keys case-sensitive. Identity writes use READ_COMMITTED transactions and a shared row lock. Unsupported database products fail with a clear startup error; provide a custom `AdminIdentityStore` for other vendors. Existing MySQL tables created manually or using the old generic SQL need an explicit migration to these engine, collation and foreign-key definitions; `CREATE TABLE IF NOT EXISTS` does not repair existing tables.
 
 For a fresh local development database, `initialize-schema: true` runs the bundled idempotent V1 DDL at startup. Keep it false for production and manage future schema changes through versioned migrations. The identity store requires an initialized schema and a writable datasource; missing schema/module fails startup instead of falling back to unrestricted access. `spring.jpa.admin.enabled=false` also disables the JDBC store autoconfiguration.
 
@@ -108,3 +118,14 @@ CI=1 E2E_PORT=18092 E2E_CHANNEL=chrome E2E_SECURITY_MODE=database npm run test:e
 ```
 
 This starts the sample with a fresh in-memory identity database, exercises the user/group UI and checks that existing reader sessions lose revoked permissions. Default browser regressions run in configured mode; `AdminPermissionsTest` covers backend bypass attempts, group union/revocation, password resets, nested writes, upload ownership and superuser protections.
+
+
+### Run the database contract tests
+
+The default command tests H2:
+
+```sh
+mvn test -pl jpa-admin-identity -am -Dtest=IdentityDatabaseTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+To test a real PostgreSQL or MySQL server, set `IDENTITY_TEST_URL`, `IDENTITY_TEST_USER` and `IDENTITY_TEST_PASSWORD` before running the same command. For example, use `jdbc:postgresql://localhost:5432/identity_test` or `jdbc:mysql://localhost:3306/identity_test`. Use a **disposable test database only**: the suite clears all `jpa_admin_*` account/group data between tests. Credentials belong in local environment variables or CI secrets. `.github/workflows/identity-databases.yml` runs the contract against H2 and both database services on relevant changes.

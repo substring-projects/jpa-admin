@@ -16,6 +16,7 @@ public class JdbcAdminIdentityStore implements AdminIdentityStore {
     public JdbcAdminIdentityStore(DataSource dataSource) {
         jdbc = new JdbcTemplate(dataSource);
         transactions = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        transactions.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
         transactions.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         try { jdbc.update("INSERT INTO jpa_admin_identity_lock(id) VALUES (1)"); }
         catch (DuplicateKeyException alreadyInitialized) { /* stable cross-instance serialization row */ }

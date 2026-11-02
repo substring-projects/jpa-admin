@@ -47,7 +47,7 @@ All properties use the `spring.jpa.admin.` prefix. Defaults come from [`JpaAdmin
 | Property | Default | Description |
 | --- | --- | --- |
 | `security.mode` | `configured` | `configured` for the existing account; `database` enables optional [users and groups](permissions.md). |
-| `security.initialize-schema` | `false` | JDBC module only: initialize the V1 identity schema for local development. Use migrations in production. |
+| `security.initialize-schema` | `false` | Identity module only: detect H2/PostgreSQL/MySQL and initialize the matching V1 schema for local development. Use vendor-specific migrations in production. |
 | `security.username` | `admin` | Configured account username, or the first database superuser bootstrap name. |
 | `security.password` | *(empty)* | **Required in configured mode or when bootstrapping an empty identity database.** BCrypt-encoded; existing database passwords are not overwritten. |
 

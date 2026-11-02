@@ -110,4 +110,4 @@ The admin owns its configured path (default `/admin/**`) with a security chain a
 
 ### Database admin users and groups
 
-Opt into `spring.jpa.admin.security.mode=database` with the optional `jpa-admin-identity` module for users, groups, and enforced entity permissions. The default configured account remains supported. See [setup, permission semantics, migration and API contract](docs/permissions.md).
+Opt into `spring.jpa.admin.security.mode=database` with the optional `jpa-admin-identity` module for users, groups, and enforced entity permissions on H2, PostgreSQL or MySQL 8.0+. The default configured account remains supported. See [setup, permission semantics, migration and API contract](docs/permissions.md).

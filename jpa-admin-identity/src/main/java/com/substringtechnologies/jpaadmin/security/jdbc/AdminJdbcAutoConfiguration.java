@@ -15,8 +15,9 @@ public class AdminJdbcAutoConfiguration {
     @Bean @ConditionalOnMissingBean(AdminIdentityStore.class)
     @ConditionalOnProperty(prefix = "spring.jpa.admin", name = "enabled", havingValue = "true", matchIfMissing = true)
     public AdminIdentityStore adminIdentityStore(DataSource source, Environment environment) {
+        var database = IdentityDatabase.detect(source);
         if (environment.getProperty("spring.jpa.admin.security.initialize-schema", Boolean.class, false)) {
-            new ResourceDatabasePopulator(new ClassPathResource("jpa-admin/migrations/V1__admin_identity.sql")).execute(source);
+            new ResourceDatabasePopulator(new ClassPathResource(database.migration)).execute(source);
         }
         return new JdbcAdminIdentityStore(source);
     }
