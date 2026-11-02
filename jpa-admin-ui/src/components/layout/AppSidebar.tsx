@@ -73,7 +73,7 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarGroup>
 
-      {manageSecurity && <SidebarGroup><SidebarMenu><SidebarMenuItem><SidebarMenuButton asChild tooltip="Users and groups">
+      {manageSecurity && <SidebarGroup><SidebarMenu><SidebarMenuItem><SidebarMenuButton asChild isActive={activeEntity === '_security'} tooltip="Users and groups">
         <Link to="/_security" onClick={closeMobile}><Users aria-hidden="true" /><span>Users and groups</span></Link>
       </SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroup>}
 

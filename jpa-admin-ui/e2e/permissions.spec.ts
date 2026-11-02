@@ -88,3 +88,20 @@ test('permission matrix keeps View dependencies and supports entity search and b
   await expect(page.getByRole('checkbox', { name: 'Product view', exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 });
+
+test('security layout supports search and keeps dialog actions visible on mobile', async ({ page }, testInfo) => {
+  await signIn(page, 'admin', 'admin');
+  await page.getByRole('link', { name: 'Users and groups' }).click();
+  await page.screenshot({ path: testInfo.outputPath('security-desktop.png'), fullPage: true });
+  await page.getByLabel('Search users or groups').fill('no-matching-account');
+  await expect(page.getByText('No users match your search.')).toBeVisible();
+  await page.getByRole('tab', { name: 'Groups', exact: true }).click();
+  await page.getByRole('button', { name: 'Add group', exact: true }).click();
+  await page.screenshot({ path: testInfo.outputPath('permissions-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('permissions-mobile.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+});
