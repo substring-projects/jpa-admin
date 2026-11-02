@@ -4,10 +4,10 @@
 
 ## Access control
 
-- **One admin account** configured in properties. There are no user accounts, password resets or SSO integration.
-- **`@AdminPermission` isn't enforced.** Everyone who signs in can read and change every entity the console exposes (within each entity's `readOnly`, `creatable`, `updatable` and `deletable` flags).
+- **No built-in SSO integration.** Optional [database users and groups](permissions.md) support account management and password resets; configured mode retains one admin account.
+- **Entity-level permissions only.** No row-level or field-level grants or explicit deny rules.
 - **No audit log** of who changed what.
-- **No rate limiting** or lockout on login.
+- **Sign-in throttling is per instance.** Failure counts live in memory, so each instance behind a load balancer counts separately and a restart clears them.
 
 ## Data model
 
@@ -15,7 +15,7 @@
 - **One-to-many collections without `@AdminInline`** aren't shown.
 - **Many-to-many inverse sides** are read-only; record pages list up to 200 linked records.
 - **Composite primary keys** aren't supported; single IDs (`Long`, `Integer`, `UUID`, `String`) are.
-- **Relation pickers** return the first 25 matches, without paging; `@AdminLookup(searchProperty, quickCreate)` aren't used yet.
+- **Relation pickers** return the first 25 matches, without paging, and can't create a related record in place.
 - **Multi-value filters** ("status is A or B") and OR conditions aren't available.
 
 ## Uploads
@@ -25,9 +25,18 @@
 - No built-in image resizing or thumbnails.
 - S3 and ImageKit are covered by automated tests against simulated services. Try them with a test bucket or account before production.
 
-## Annotation options not used yet
+## Annotation options
 
-`@AdminWidget(min, max, step, language, previewSize)`, `WidgetType.SLIDER`, `InlineType.STACKED`, `@AdminComputed(format)`, `@AdminSensitive(mask, maskPattern)`, `@AdminAction(icon)` (a standard icon is shown) and the `page-size` property. The [annotation reference](annotations.md) marks each one.
+`WidgetType.DATE_PICKER` and `DATE_TIME_PICKER` behave like `AUTO`, because date fields already get native pickers. Every other annotation option has an effect; the [annotation reference](annotations.md) describes each one.
+
+## Identity administration
+
+- Built-in persistence targets H2, PostgreSQL and MySQL 8.0+; the tested server versions are PostgreSQL 18 and MySQL 8.4. Other vendors need a custom store.
+- No built-in forgotten-password email, account invitation, MFA or password-recovery CLI.
+- Account/group lists are loaded in full; management pagination is not implemented.
+- Dedicated table names are fixed, and the built-in adapter uses the host datasource. Separate storage requires a custom bean.
+- Startup schema initialization creates missing tables; it is not an upgrade/migration engine.
+- Users and Groups dialogs discard unsaved edits on Close/Cancel without an unsaved-change prompt.
 
 ## Platform
 
@@ -46,7 +55,7 @@ Ideas under consideration, roughly in order:
 
 1. Image galleries and multi-file uploads, with reordering.
 2. Change history for records.
-3. Multiple users with roles, enforcing `@AdminPermission`.
+3. Row-level access policies and identity-provider integration.
 4. Quick-create from relation pickers, and paged lookups.
 5. Embedded-object editing.
 

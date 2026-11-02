@@ -39,7 +39,7 @@ Update the relevant documentation when changing configuration, annotation semant
 
 - Run relevant Java tests and frontend regression tests; run the frontend production build for UI changes.
 - Keep credentials and machine-specific configuration out of commits.
-- Review generated assets separately from source changes. JitPack currently packages committed `jpa-admin-ui/dist` assets, so release builds require those assets to match the source.
+- Don't commit `jpa-admin-ui/dist`; Maven builds the UI from source.
 - State any checks that could not run and why.
 - Verify relative documentation links and fenced examples before submitting documentation changes.
 

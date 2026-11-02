@@ -13,7 +13,7 @@
 
     <groupId>com.substringtechnologies</groupId>
     <artifactId>jpa-admin-parent</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <packaging>pom</packaging>
     <name>Spring Boot JPA Admin (Parent)</name>
     <description>Zero-configuration dynamic Admin UI generator for JPA entities in Spring Boot</description>
@@ -59,6 +59,7 @@
         <module>jpa-admin-ui</module>
         <module>jpa-admin-spring-boot-autoconfigure</module>
         <module>jpa-admin-spring-boot-starter</module>
+        <module>jpa-admin-identity</module>
         <module>jpa-admin-sample-app</module>
     </modules>
 
@@ -89,6 +90,11 @@
             <dependency>
                 <groupId>com.substringtechnologies</groupId>
                 <artifactId>jpa-admin-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.substringtechnologies</groupId>
+                <artifactId>jpa-admin-identity</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

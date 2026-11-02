@@ -1,14 +1,16 @@
 # Release guide
 
-<p class="jpa-lead">Build, sign and publish the parent POM and four library modules together. The sample application stays in GitHub and is excluded from Central publication.</p>
+<p class="jpa-lead">Build, sign and publish the parent POM and five library modules together (including optional identity). The sample application stays in GitHub and is excluded from Central publication.</p>
 
-The current source version is `0.1.0`. This is the first Maven Central release; older JitPack tags use a separate version sequence. The project uses [Apache License 2.0](../LICENSE).
+The prepared release version is `0.2.0`; publication is pending. The previous release is `0.1.0`, the first Maven Central release. Maven Central is the only distribution channel. The project uses [Apache License 2.0](../LICENSE).
+
+See the [0.2.0 release checklist](release-0.2.0.md) for migration notes and validation evidence for this preparation.
 
 ## Prepare a release
 
-1. Select the release commit. Update the root version and all five module parent references together. Keep library versions aligned.
+1. Select the release commit. Update the root version and all six module parent references together. Keep library versions aligned.
 2. Review configuration, API and compatibility documentation against the release code. Update [What's new](whats-new.md) and installation examples.
-3. Run the checks below. Rebuild and review the tracked `jpa-admin-ui/dist` assets; legacy JitPack builds package them directly.
+3. Run the checks below. The release build compiles the UI from source, so run `npm ci --prefix jpa-admin-ui` first and don't pass `-DskipNpmBuild`.
 4. Run the sample with disposable data. Check login/logout, record browsing, create/update, relations, uploads and custom actions. Test the starter in a separate consumer application.
 5. Keep credentials, private keys and local Maven settings outside Git. Establish a private vulnerability-reporting channel before advertising one.
 
@@ -17,6 +19,7 @@ npm ci --prefix jpa-admin-ui
 npm test --prefix jpa-admin-ui
 ./mvnw clean install
 npm run test:e2e --prefix jpa-admin-ui
+E2E_SECURITY_MODE=database E2E_PORT=18095 npm run test:e2e --prefix jpa-admin-ui -- permissions.spec.ts
 .venv-docs/bin/mkdocs build --strict
 ```
 
@@ -41,6 +44,15 @@ Maven builds the frontend but does not run its unit or browser tests. There is n
 ```
 
 If the file already exists, merge the server entry into its existing `servers` section. Use token credentials, not your account password or GPG passphrase. On macOS/Linux, restrict file access with `chmod 600 ~/.m2/settings.xml`.
+
+## Verify artifacts without signing or uploading
+
+```sh
+./mvnw -Prelease -Dgpg.skip=true clean install
+python3 scripts/verify_release_artifacts.py
+```
+
+This verifies release packaging locally while explicitly skipping GPG. It is not a signed or publishable bundle yet. Non-Java UI/starter modules supply source/configuration archives and HTML documentation classifiers; their lack of Java classes does not remove the classifier requirement. CI also checks these artifacts.
 
 ## Verify signing without uploading
 
@@ -71,21 +83,24 @@ Expected publication:
 | `jpa-admin-ui` | JAR containing compiled UI assets |
 | `jpa-admin-spring-boot-autoconfigure` | JAR |
 | `jpa-admin-spring-boot-starter` | JAR with dependency metadata |
+| `jpa-admin-identity` | Optional JDBC identity adapter and vendor migrations |
+
+For 0.2.x releases, verify the identity artifact independently: it is optional and resolving only the starter does not fetch it. Run the PostgreSQL/MySQL contract workflow before claiming those database configurations are verified.
 
 The sample is excluded through `excludeArtifacts`. Verify that it is absent from the Portal deployment. See the [Central Maven plugin guide](https://central.sonatype.org/publish/publish-portal-maven/) for the publishing lifecycle.
 
-Published versions are immutable. For a later fix, choose a new version such as `0.1.1` and update the parent and all module references together.
+Published versions are immutable. For a later fix, choose a new version such as `0.2.1` and update the parent and all module references together.
 
 ## Verify public availability
 
-A successful upload or a local `mvn install` does not establish public availability. Check the [public starter POM](https://repo.maven.apache.org/maven2/com/substringtechnologies/jpa-admin-spring-boot-starter/0.1.0/jpa-admin-spring-boot-starter-0.1.0.pom), then resolve the starter and dependencies using an empty cache:
+A successful upload or a local `mvn install` does not establish public availability. Check the [public starter POM](https://repo.maven.apache.org/maven2/com/substringtechnologies/jpa-admin-spring-boot-starter/0.2.0/jpa-admin-spring-boot-starter-0.2.0.pom), then resolve the starter and dependencies using an empty cache:
 
 ```bash
 # macOS/Linux; run outside the project to avoid its reactor and profiles
 cd /tmp
 release_cache=$(mktemp -d)
 mvn org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get \
-  -Dartifact=com.substringtechnologies:jpa-admin-spring-boot-starter:0.1.0 \
+  -Dartifact=com.substringtechnologies:jpa-admin-spring-boot-starter:0.2.0 \
   -Dmaven.repo.local="$release_cache" \
   -Dtransitive=true
 ```

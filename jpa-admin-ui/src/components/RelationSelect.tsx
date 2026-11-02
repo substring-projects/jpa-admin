@@ -15,12 +15,15 @@ interface Props {
   value: RelationValue;
   invalid?: boolean;
   disabled?: boolean;
+  /** From @AdminLookup: the related field searched and the one shown as each option's label. */
+  searchProperty?: string;
+  labelProperty?: string;
   onChange: (value: { id: string | number; label?: string } | null) => void;
 }
 
 const display = (label: string) => (isUuid(label) ? shortId(label) : label);
 
-export function RelationSelect({ id, label, entity, value, invalid, disabled, onChange }: Props) {
+export function RelationSelect({ id, label, entity, value, invalid, disabled, onChange, searchProperty, labelProperty }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<Array<{ id: string | number; label: string }>>([]);
@@ -35,13 +38,13 @@ export function RelationSelect({ id, label, entity, value, invalid, disabled, on
     let active = true;
     setLoading(true);
     const timer = window.setTimeout(() => {
-      lookupRecords(entity, query)
+      lookupRecords(entity, query, { searchProperty, labelProperty })
         .then(results => { if (active) { setOptions(results); setError(''); } })
         .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Lookup failed'); })
         .finally(() => { if (active) setLoading(false); });
     }, 200);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [entity, query, open]);
+  }, [entity, query, open, searchProperty, labelProperty]);
 
   const hasValue = selectedId != null && selectedId !== '';
   return <Popover open={open} onOpenChange={setOpen}>

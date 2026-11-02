@@ -6,7 +6,7 @@
 
 - [x] **Password from a secret.** `spring.jpa.admin.security.password: ${ADMIN_PASSWORD}`, set by your platform's secret manager.
 - [x] **HTTPS** in front of the application (load balancer, ingress or reverse proxy).
-- [x] **Restrict access** to `{path}` with a VPN, SSO proxy or IP allow-list when the app faces the internet. The console has one account and no rate limiting.
+- [x] **Restrict access** to `{path}` with a VPN, SSO proxy or IP allow-list when the app faces the internet. Configured mode has one account; database mode supports individual users/groups. Neither includes login rate limiting.
 - [x] **A real database** in place of the sample's H2, with schema changes managed by your migration tool (Flyway or Liquibase).
 - [x] **Disable demo settings** such as the H2 console.
 - [x] **Review editable entities.** Mark sensitive ones `readOnly = true` or `hidden = true` ([customizing](entity-customization.md#control-what-users-can-do)).
@@ -49,3 +49,14 @@ The console works under its configured `path`. If the proxy adds its own prefix,
 ## Updating
 
 The UI is versioned with the starter: upgrading the dependency upgrades the console. Read [What's new](whats-new.md) for breaking changes. Don't overwrite a running JAR in place; stop the process or deploy a new artifact.
+
+
+## Database identity rollout
+
+For a team installation, add `jpa-admin-identity`, choose `mode: database`, and apply the [vendor-specific identity migration](database-setup.md) before starting with `initialize-schema: false`. Keep dependency versions aligned. Existing accounts survive restarts in a persistent database; bootstrap settings do not overwrite passwords.
+
+Back up identity tables alongside business records. Restore users, groups, memberships and grants consistently, and plan session invalidation when restoring older account versions. A database restore does not restore or revoke session cookies by itself. There is no built-in identity backup/restore or password-recovery command.
+
+All instances must use the intended shared identity database for consistent accounts and permissions. Identity tables do **not** store HTTP sessions: configure session persistence separately. Account/group mutations are serialized by a database row lock; do not remove the coordination table or route identity traffic to a read-only replica. Large-scale account administration is not paginated in this version.
+
+For upgrades, preserve stable permission namespaces and test reader/editor accounts in addition to a superuser. Changing from database to configured mode changes the access model; it is not an equivalent fallback. Verify datasource, security-chain and migration behavior in staging with your actual database version.

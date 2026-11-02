@@ -1,0 +1,16 @@
+# Local-only, disposable demonstration of the optional jpa-admin-identity module.
+server:
+  address: 127.0.0.1
+  port: 18093
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:identitydemo;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+  jpa:
+    admin:
+      title: "Admin Identity Demo"
+      security:
+        mode: database
+        initialize-schema: true
+        username: ${ADMIN_USERNAME:admin}
+        password: ${ADMIN_PASSWORD:admin-demo-123}

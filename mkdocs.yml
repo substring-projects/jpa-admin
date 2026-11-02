@@ -127,13 +127,17 @@ nav:
       - Installation: installation.md
       - Run the sample: getting-started.md
       - Configuration: configuration.md
+      - Identity database setup: database-setup.md
       - What's new: whats-new.md
   - Guides:
       - Using the console: user-guide.md
+      - Practical setup & best use: practical-guide.md
       - Customizing entities: entity-customization.md
       - File & image uploads: file-uploads.md
       - Branding & theming: branding.md
       - Security: security.md
+      - Users and permissions: permissions.md
+      - Custom identity stores: custom-identity.md
   - Reference:
       - Annotations: annotations.md
       - REST API: api-reference.md
@@ -145,5 +149,6 @@ nav:
       - Architecture: architecture.md
       - Development: development.md
       - Release guide: releasing.md
+      - 0.2.0 release checklist: release-0.2.0.md
       - Documentation website: publishing-docs.md
       - Contributing guide: https://github.com/substring-projects/jpa-admin/blob/main/CONTRIBUTING.md

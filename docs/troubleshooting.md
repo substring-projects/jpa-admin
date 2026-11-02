@@ -20,10 +20,10 @@
 | Problem | Fix |
 | --- | --- |
 | The console page is blank or 404 | Open `{path}/` with the trailing slash, for example `/admin/`. Check that `spring.jpa.admin.enabled` isn't `false` and that the app is a servlet web application. |
-| "Invalid username or password" | Check the values in effect; environment variables override `application.yml`. Restart after changing them. |
+| "Invalid username or password" | In configured mode check effective YAML/environment values and restart. In database mode check the stored account, Active/Admin access flags and password; YAML changes do not reset an existing database password. |
 | "Your session has expired" | Sign in again. Behind several instances, use sticky sessions or Spring Session. |
 | `403` on saves from scripts | Send the CSRF header from `/auth/session` with the session cookie. Fetch a fresh token after signing in, because the session rotates. |
-| Another security chain intercepts the API | The admin chain has order `-100` and matches `{path}/api/**`. Make sure your own chains don't claim that path first. |
+| Another security chain intercepts the API | The admin chain has order `-100` and matches `{path}` and `{path}/**`. Make sure your own chains don't claim that path first. |
 
 ## Data
 
@@ -54,7 +54,47 @@
 
 | Problem | Fix |
 | --- | --- |
-| UI changes don't appear in the JAR | Rebuild with `./mvnw package` (or `npm run build` in `jpa-admin-ui`) and restart. JitPack builds use the committed `jpa-admin-ui/dist`. |
-| `npm` not found during the Maven build | Install Node.js 20+ and run `npm ci --prefix jpa-admin-ui`, or build with `-DskipNpmBuild=true` to reuse the committed `dist`. |
+| UI changes don't appear in the JAR | Build React **and repackage the sample/app JAR**, then restart and refresh. `npm run build` alone updates `dist`, not the existing sample JAR. See [UI packaging](development.md#seeing-ui-changes-in-the-running-application). |
+| `npm` not found during the Maven build | Install Node.js 20+ and run `npm ci --prefix jpa-admin-ui`, then build again. `-DskipNpmBuild=true` only works after a previous local UI build. |
 | Saved views or hidden columns are gone | They're stored per browser; clearing site data removes them. |
 | Port 8080 is busy | Start with `--server.port=8081`. |
+
+
+## Identity and permissions
+
+| Symptom | Check and resolution |
+| --- | --- |
+| `Database admin security requires jpa-admin-identity or an AdminIdentityStore bean` | Keep database mode and add the same-version identity module or your custom store bean. It intentionally does not fall back to configured mode. |
+| Unsupported admin identity database | Built-in support is H2/PostgreSQL/MySQL 8.0+. Supply a [custom adapter](custom-identity.md) for another vendor; a host JPA dialect alone is insufficient. |
+| Identity table not found at startup | Apply the correct vendor migration before startup, or use `initialize-schema: true` only for local initialization. Check the datasource/schema and migration ordering. Hibernate does not create identity tables. |
+| Missing datasource or driver | Configure `spring.datasource` and add the host JDBC driver. Identity's driver dependencies are test-only, not supplied to consumers. |
+| YAML says database mode but the old login still appears | Confirm the running artifact, active profiles and command-line overrides. Stop/restart the correct process and use its port. |
+| Users and Groups is missing | It requires database mode and a current active/admin-enabled superuser. Configured mode deliberately has no account-management UI. |
+| There are no groups | Expected: normal bootstrap creates only one superuser. Create groups manually; only `identity-demo` seeds example groups. |
+| Host users are absent from Users | That screen lists dedicated admin identities. Host JPA users are a separate entity if exposed. |
+| User logs in but sees no entities | Assign a group with View grants; non-superusers with no groups have no entity access. |
+| Add/Change is granted but access is denied | View is also required. Check entity `readOnly`/operation flags and the stable resource key. |
+| Permission is visible but a superuser cannot edit | Entity hard restrictions still apply to superusers. The catalog includes standard operations even when an entity disables them. |
+| Category/tag selector or relation field disappears | Give View on the related entity. Granting Product Change does not grant Category View. |
+| Parent save/delete fails for inline children | Check child View and operation grants, and inline `canAdd`/`canDelete`/`limit`. A denied nested write rolls back the parent. |
+| Removing a permission from one group changes nothing | Check other assigned groups and Superuser. Grants are a union; there is no deny rule. |
+| Old controls remain visible after revocation | Refresh metadata by reloading. The backend already checks current grants on subsequent requests. |
+| Account disappears after sample restart | Sample H2 is in-memory. Use a persistent database for durable users/groups. |
+| Bootstrap password was changed but login still uses the old one | Bootstrap runs only for an empty users table. Reset through another superuser instead. |
+| Removing bootstrap secret breaks startup despite existing accounts | A required `${...}` placeholder still needs a value. Remove that config entry or use an empty fallback after initial provisioning. |
+| Last-superuser error on delete/disable | Keep another active superuser with admin access before removing this one's access. Do not delete tables to bypass it. |
+| MySQL initialization succeeds but old tables lack constraints | CREATE IF NOT EXISTS does not update existing tables. Apply an explicit corrective migration; do not rerun or overwrite an applied migration expecting repair. |
+| Unknown permission key after a class rename | Use a stable `permissionResource` and migrate old group grants intentionally. The default namespace includes the Java package/class name. |
+| Password reset rejected | Management passwords require at least 12 characters and at most 72 UTF-8 bytes; non-ASCII characters may take multiple bytes. |
+
+## Distinguish API failures
+
+- `401`: admin authentication is missing, expired or invalidated. A host bearer token is not an admin session.
+- `403` with `CSRF_INVALID`: obtain a fresh token using the same cookie jar. Fetch it again after login/session rotation.
+- `403` with `ACCESS_DENIED`: inspect grants, account flags and entity restrictions; a new CSRF token will not grant permission.
+- `400`: malformed identity input, unknown permission/group, or a protected business rule such as the last superuser.
+- `404`: missing entity record, admin user or group; verify IDs and configured URL prefixes.
+- `409`: conflicting names or database references. Correct the data instead of automatically retrying the same write.
+- `422` on entity writes: inspect `fieldErrors` for validation failures.
+
+Do not automatically replay failed mutations. First determine whether the operation was accepted and why a later response or request failed.

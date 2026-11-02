@@ -28,8 +28,10 @@ public class UploadService {
     private final JpaMetamodelScanner scanner;
     private final StorageRegistry storages;
     private final UploadTokens tokens;
+    private final com.substringtechnologies.jpaadmin.security.AdminAccess access;
 
-    public UploadService(JpaMetamodelScanner scanner, StorageRegistry storages, UploadTokens tokens) {
+    public UploadService(JpaMetamodelScanner scanner, StorageRegistry storages, UploadTokens tokens, com.substringtechnologies.jpaadmin.security.AdminAccess access) {
+        this.access = access;
         this.scanner = scanner;
         this.storages = storages;
         this.tokens = tokens;
@@ -38,6 +40,8 @@ public class UploadService {
     public record Prepared(String token, UploadTicket ticket) {}
 
     public Prepared prepare(String entityName, String fieldName, String fileName, String contentType, long size) {
+        String operation = access.can(scanner.getMetadata(entityName), "change") ? "change" : "add";
+        access.require(scanner.getMetadata(entityName), operation);
         UploadMetadata rules = rules(entityName, fieldName);
         String type = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT).split(";")[0].trim();
         if (size <= 0) throw new UploadException(400, "The file is empty");
@@ -50,18 +54,24 @@ public class UploadService {
         String key = folder + YearMonth.now().toString().replace('-', '/') + "/" + UUID.randomUUID().toString().substring(0, 8)
                 + readableName(fileName) + FileSignatures.extensionFor(type, fileName);
         String token = tokens.sign(new UploadTokens.Claims(rules.getStorage(), key, type, size, rules.getMaxSize(), entityName, fieldName,
-                Instant.now().plus(TICKET_TTL).getEpochSecond()));
+                Instant.now().plus(TICKET_TTL).getEpochSecond(), access.subject(), operation));
         return new Prepared(token, storages.get(rules.getStorage()).prepare(key, type, size, token));
     }
 
     /** Receives a file sent through the admin API (local storage). */
     public void receive(String token, InputStream content) throws IOException {
         UploadTokens.Claims claims = tokens.verify(token);
+        if (!access.subject().equals(claims.subject())) throw new com.substringtechnologies.jpaadmin.security.AdminAccessDeniedException();
+        access.require(scanner.getMetadata(claims.entity()), claims.operation());
+        rules(claims.entity(), claims.field());
         storages.get(claims.storage()).receive(claims.key(), content, claims.maxSize());
     }
 
     public String complete(String token, Map<String, String> providerData) throws IOException {
         UploadTokens.Claims claims = tokens.verify(token);
+        if (!access.subject().equals(claims.subject())) throw new com.substringtechnologies.jpaadmin.security.AdminAccessDeniedException();
+        access.require(scanner.getMetadata(claims.entity()), claims.operation());
+        rules(claims.entity(), claims.field());
         FileStorage storage = storages.get(claims.storage());
         StoredObject stored = storage.inspect(claims.key(), providerData);
         String problem = problem(claims, stored);

@@ -12,6 +12,7 @@ On an entity class. Controls how the entity appears and what can be done with it
 
 | Option | Type | Default | Status | Description |
 | --- | --- | --- | --- | --- |
+| `permissionResource` | `String` | fully qualified Java class name | Supported | Stable case-sensitive grant namespace, for example `catalog.Product`. Does not rename entity API URLs. |
 | `displayName` | `String` | class name, humanized | <span class="jpa-pill jpa-pill--yes">Supported</span> | Singular name ("New Product"). |
 | `pluralName` | `String` | display name + "s" | <span class="jpa-pill jpa-pill--yes">Supported</span> | Sidebar and page title. |
 | `group` | `String` | `"General"` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Sidebar and dashboard group. |
@@ -24,7 +25,7 @@ On an entity class. Controls how the entity appears and what can be done with it
 | `exportable` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Show the CSV Export button. |
 | `defaultSortBy` | `String` | `"id"` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Field the table is sorted by initially. |
 | `defaultSortDir` | `SortDir` | `DESC` | <span class="jpa-pill jpa-pill--yes">Supported</span> | `ASC` or `DESC`. |
-| `pageSize` | `int` | `25` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Initial rows per page. |
+| `pageSize` | `int` | `0` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Initial rows per page, 1–500. `0` uses [`spring.jpa.admin.page-size`](configuration.md). |
 | `hidden` | `boolean` | `false` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Exclude the entity from the console and API. |
 
 ## @AdminField
@@ -51,10 +52,13 @@ On a field. Chooses the input control.
 
 | Option | Type | Default | Status | Description |
 | --- | --- | --- | --- | --- |
-| `type` | `WidgetType` | `AUTO` | <span class="jpa-pill jpa-pill--partial">Partial</span> | See the widget table below. |
-| `min`, `max`, `step` | `double` | — | <span class="jpa-pill jpa-pill--no">Not yet</span> | Use `@Min` / `@Max` for numeric limits. |
-| `language` | `String` | `"json"` | <span class="jpa-pill jpa-pill--no">Not yet</span> | The code editor has no language-specific highlighting yet. |
-| `previewSize` | `String` | `"48px"` | <span class="jpa-pill jpa-pill--no">Not yet</span> | — |
+| `type` | `WidgetType` | `AUTO` | <span class="jpa-pill jpa-pill--yes">Supported</span> | See the widget table below. |
+| `min`, `max` | `double` | unbounded | <span class="jpa-pill jpa-pill--yes">Supported</span> | Number bounds. The input enforces them and the API rejects values outside them with a field error. Numeric fields only. |
+| `step` | `double` | `0` (any) | <span class="jpa-pill jpa-pill--yes">Supported</span> | Input increment for numbers and sliders. |
+| `language` | `String` | `"json"` | <span class="jpa-pill jpa-pill--yes">Supported</span> | `CODE_EDITOR` syntax: `json`, `javascript`, `typescript`, `html`, `css`, `sql`, `xml`, `markdown`, `yaml`, `python` or `text`. |
+| `previewSize` | `String` | `""` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Thumbnail size in tables for image fields, as a CSS length (`64px`, `4rem`). |
+
+Misconfigured widgets fail at startup and name the field: bounds or `SLIDER` on a non-numeric field, `min` above `max`, a `SLIDER` without both bounds, an unknown `language` or an invalid `previewSize`.
 
 | `WidgetType` | Status | Renders as |
 | --- | --- | --- |
@@ -68,7 +72,7 @@ On a field. Chooses the input control.
 | `PASSWORD` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Masked input with reveal |
 | `BOOLEAN_SWITCH` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Switch |
 | `DATE_PICKER`, `DATE_TIME_PICKER` | <span class="jpa-pill jpa-pill--partial">Partial</span> | Same as `AUTO`: date fields already get native pickers |
-| `SLIDER` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Rendered as a number input |
+| `SLIDER` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Range slider with the current value; requires `min` and `max` |
 | `FILE_UPLOAD` | <span class="jpa-pill jpa-pill--partial">Partial</span> | Use [`@AdminUpload`](#adminupload), which sets this automatically |
 
 ## @AdminUpload
@@ -100,8 +104,9 @@ On a relation field.
 | Option | Type | Default | Status | Description |
 | --- | --- | --- | --- | --- |
 | `lookupProperty` | `String` | `""` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Property used as the related record's label. |
-| `searchProperty` | `String` | `""` | <span class="jpa-pill jpa-pill--no">Not yet</span> | The picker searches the target's name-like field and ID. |
-| `quickCreate` | `boolean` | `false` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Creating a related record from the picker isn't available yet. |
+| `searchProperty` | `String` | `""` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Text property of the related record the picker searches, plus the ID. Without it the picker searches a name-like field. |
+
+`lookupProperty` and `searchProperty` must name visible (not sensitive or computed) fields of the related entity, and `searchProperty` a text field; otherwise startup fails. The picker labels options with `lookupProperty` too.
 
 ## @AdminInline
 
@@ -113,7 +118,7 @@ On a `@OneToMany` or `@ManyToMany` collection.
 | `canAdd` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Allow adding rows. Enforced by the API. |
 | `canDelete` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Allow removing rows. Enforced by the API. |
 | `limit` | `int` | `50` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Maximum rows. Enforced by the API. |
-| `type` | `InlineType` | `TABULAR` | <span class="jpa-pill jpa-pill--partial">Partial</span> | `STACKED` currently renders as a table too. |
+| `type` | `InlineType` | `TABULAR` | <span class="jpa-pill jpa-pill--yes">Supported</span> | `TABULAR` edits rows in a table; `STACKED` shows each row as a panel with full-size inputs, better for many or wide fields. |
 
 Editable only for `@OneToMany(mappedBy = …)`. Many-to-many inlines are read-only.
 
@@ -126,7 +131,9 @@ On an entity method. See [Custom actions](entity-customization.md#custom-actions
 | `name` | `String` | — (required) | <span class="jpa-pill jpa-pill--yes">Supported</span> | Menu and button label. |
 | `confirmation` | `String` | `""` | <span class="jpa-pill jpa-pill--yes">Supported</span> | When set, asks for confirmation with this message. |
 | `scope` | `ActionScope` | `BOTH` | <span class="jpa-pill jpa-pill--yes">Supported</span> | `SINGLE_ROW`, `BULK_SELECTION` or `BOTH`. Controls where the action appears. |
-| `icon` | `String` | `"zap"` | <span class="jpa-pill jpa-pill--partial">Partial</span> | Returned in metadata; the console shows a standard action icon. |
+| `icon` | `String` | `"zap"` | <span class="jpa-pill jpa-pill--yes">Supported</span> | [Lucide](https://lucide.dev/icons/) icon name, such as `send` or `archive`. Unknown names show the default icon. |
+
+An action that throws `IllegalStateException` or `IllegalArgumentException` shows the exception's message to the admin (HTTP 409); use it for expected refusals such as "Archived products can't be published". Other exceptions are logged and reported as a generic server error.
 
 ## @AdminComputed
 
@@ -138,25 +145,19 @@ On a no-argument `getX()` / `isX()` method.
 | `order` | `int` | `100` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Position. |
 | `inList` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Show as a column. |
 | `inDetail` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Show on the record page. |
-| `format` | `String` | `""` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Values use the standard formatting. |
+| `format` | `String` | `""` | <span class="jpa-pill jpa-pill--yes">Supported</span> | [`java.util.Formatter`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Formatter.html) pattern applied on the server, such as `"$%,.2f"` or `"%.1f%%"`. A pattern that doesn't fit the value logs a warning and shows the plain value. |
 
 ## @AdminSensitive
 
-On a field. Masks the value in responses, hides it from tables, and uses a masked input.
+On a field. The value is write-only: it is never sent to the browser, searched, filtered, sorted or exported. Forms use a masked input; leaving it blank keeps the stored value.
 
 | Option | Type | Default | Status | Description |
 | --- | --- | --- | --- | --- |
 | *(marker)* | | | <span class="jpa-pill jpa-pill--yes">Supported</span> | Fields named like `password` or `secret` are treated as sensitive automatically. |
-| `mask` | `boolean` | `true` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Sensitive values are always masked. |
-| `maskPattern` | `String` | `"••••••••"` | <span class="jpa-pill jpa-pill--no">Not yet</span> | The mask is always `••••••••`. |
+| `mask` | `boolean` | `true` | <span class="jpa-pill jpa-pill--yes">Supported</span> | `true` shows `maskPattern` when a value is set. `false` doesn't reveal whether a value is set; the console shows "Hidden". |
+| `maskPattern` | `String` | `"••••••••"` | <span class="jpa-pill jpa-pill--yes">Supported</span> | Text shown for a set value. A request that sends this text back is treated as "unchanged". |
 
-## @AdminPermission
-
-On an entity class.
-
-| Option | Type | Default | Status | Description |
-| --- | --- | --- | --- | --- |
-| `roles`, `createRoles`, `readRoles`, `updateRoles`, `deleteRoles` | `String[]` | `{}` | <span class="jpa-pill jpa-pill--no">Not yet</span> | Exposed in metadata but not enforced. The console has a single admin account; see [Security](security.md). |
+Set `@AdminResource(permissionResource = "catalog.Product")` for a stable permission namespace; the default is the fully qualified entity class name. See [Permissions](permissions.md).
 
 ## Enums
 

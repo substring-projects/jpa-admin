@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -69,24 +70,30 @@ export function FieldInput({ field, value, onChange, id, isEdit = false, invalid
   }
   if (field.fieldType === 'RELATION_MANY_TO_ONE' || field.fieldType === 'RELATION_ONE_TO_ONE') {
     return <RelationSelect id={id} label={field.label} entity={field.lookupTargetEntity || ''} invalid={invalid} disabled={disabled}
+      searchProperty={field.searchProperty || undefined} labelProperty={field.lookupProperty || undefined}
       value={value as never} onChange={onChange} />;
   }
   if (field.fieldType === 'RELATION_MANY_TO_MANY') {
     return <RelationMultiSelect id={id} label={field.label} entity={field.lookupTargetEntity || ''} invalid={invalid} disabled={disabled}
+      searchProperty={field.searchProperty || undefined} labelProperty={field.lookupProperty || undefined}
       value={Array.isArray(value) ? value as Ref[] : []} onChange={onChange} />;
   }
   if (!compact && (field.widget === 'RICH_TEXT' || field.widget === 'CODE_EDITOR')) {
     const Editor = field.widget === 'RICH_TEXT' ? RichTextEditor : CodeEditor;
     return <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-      <Editor id={id} value={String(value ?? '')} onChange={onChange} disabled={disabled} invalid={invalid} describedBy={describedBy} />
+      {field.widget === 'CODE_EDITOR'
+        ? <CodeEditor id={id} value={String(value ?? '')} onChange={onChange} disabled={disabled} invalid={invalid} describedBy={describedBy} language={field.language ?? undefined} />
+        : <Editor id={id} value={String(value ?? '')} onChange={onChange} disabled={disabled} invalid={invalid} describedBy={describedBy} />}
     </Suspense>;
   }
   if (!compact && isWideField(field)) {
     return <Textarea {...common} rows={5} value={String(value ?? '')} placeholder={field.placeholder} onChange={e => onChange(e.target.value)} />;
   }
   if (field.sensitive || field.widget === 'PASSWORD') {
+    // The mask stands for the stored value; showing it in the input would save it back as the new value.
+    const text = field.sensitive && value === field.maskPattern ? '' : String(value ?? '');
     return <div className="relative">
-      <Input {...common} type={revealed ? 'text' : 'password'} autoComplete="new-password" value={String(value ?? '')} className={cn('pr-10', size)}
+      <Input {...common} type={revealed ? 'text' : 'password'} autoComplete="new-password" value={text} className={cn('pr-10', size)}
         placeholder={isEdit ? 'Leave blank to keep the current value' : field.placeholder} onChange={e => onChange(e.target.value)} />
       <Button type="button" variant="ghost" size="icon-sm" className={cn('absolute right-0.5 text-muted-foreground', compact ? 'top-0 size-8' : 'top-0.5')}
         aria-label={revealed ? 'Hide value' : 'Show value'} onClick={() => setRevealed(!revealed)}>
@@ -108,8 +115,19 @@ export function FieldInput({ field, value, onChange, id, isEdit = false, invalid
       <Input {...common} value={String(value ?? '')} onChange={e => onChange(e.target.value)} className={cn('font-mono', size)} />
     </div>;
   }
+  if (field.widget === 'SLIDER' && field.min != null && field.max != null) {
+    const min = field.min, max = field.max;
+    const current = value === '' || value == null || Number.isNaN(Number(value)) ? null : Number(value);
+    return <div className={cn('flex items-center gap-3', compact ? 'h-8' : 'h-9')}>
+      <Slider id={id} aria-label={field.label} aria-invalid={invalid || undefined} aria-describedby={describedBy} disabled={disabled}
+        min={min} max={max} step={field.step ?? 1} value={[current ?? min]} onValueChange={([n]) => onChange(n)} className="flex-1" />
+      <output htmlFor={id} className={cn('w-14 text-right text-sm tabular', current == null && 'text-muted-foreground')}>{current ?? '—'}</output>
+    </div>;
+  }
+  const number = field.fieldType === 'NUMBER';
   return <Input {...common} className={size}
-    type={field.fieldType === 'NUMBER' ? 'number' : field.validation?.email ? 'email' : field.widget === 'IMAGE_URL' ? 'url' : 'text'}
-    step={field.fieldType === 'NUMBER' ? 'any' : undefined} value={String(value ?? '')} placeholder={field.placeholder}
+    type={number ? 'number' : field.validation?.email ? 'email' : field.widget === 'IMAGE_URL' ? 'url' : 'text'}
+    step={number ? field.step ?? 'any' : undefined} min={number ? field.min ?? undefined : undefined} max={number ? field.max ?? undefined : undefined}
+    value={String(value ?? '')} placeholder={field.placeholder}
     onChange={e => onChange(e.target.value)} />;
 }

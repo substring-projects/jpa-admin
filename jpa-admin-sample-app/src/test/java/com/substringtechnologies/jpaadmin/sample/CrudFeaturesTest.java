@@ -16,7 +16,8 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@org.springframework.security.test.context.support.WithMockUser(username = "admin", roles = "JPA_ADMIN")
+@SpringBootTest(properties = "spring.jpa.admin.security.mode=configured")
 class CrudFeaturesTest {
 
     @Autowired

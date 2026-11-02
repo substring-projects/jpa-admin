@@ -5,6 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EntityMetadata {
+    private String permissionResource;
+    private java.util.Map<String, Boolean> permissions = new java.util.LinkedHashMap<>();
+    public String getPermissionResource() { return permissionResource == null ? javaClassName : permissionResource; }
+    public void setPermissionResource(String value) { permissionResource = value; }
+    public java.util.Map<String, Boolean> getPermissions() { return permissions; }
+    public void setPermissions(java.util.Map<String, Boolean> value) { permissions = value; }
     private String entityName;
     private String javaClassName;
     private String displayName;
@@ -25,7 +31,6 @@ public class EntityMetadata {
     private List<FieldMetadata> fields = new ArrayList<>();
     private List<InlineMetadata> inlines = new ArrayList<>();
     private List<ActionMetadata> actions = new ArrayList<>();
-    private List<String> roles = new ArrayList<>();
 
     public String getEntityName() { return entityName; }
     public void setEntityName(String entityName) { this.entityName = entityName; }
@@ -83,9 +88,6 @@ public class EntityMetadata {
 
     public List<ActionMetadata> getActions() { return actions; }
     public void setActions(List<ActionMetadata> actions) { this.actions = actions; }
-
-    public List<String> getRoles() { return roles; }
-    public void setRoles(List<String> roles) { this.roles = roles; }
 
     public FieldMetadata getField(String name) {
         return fields.stream().filter(f -> f.getName().equalsIgnoreCase(name)).findFirst().orElse(null);

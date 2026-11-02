@@ -2,6 +2,7 @@ import { API_BASE } from '@/lib/base-path';
 
 export interface AdminSession {
   authenticated: boolean;
+  manageSecurity?: boolean;
   username: string;
   title: string;
   csrfToken: string;
@@ -26,6 +27,10 @@ export async function login(username: string, password: string): Promise<AdminSe
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', [current.csrfHeader]: current.csrfToken },
     body: new URLSearchParams({ username, password }),
   });
+  if (response.status === 429) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || 'Too many failed sign-in attempts. Try again later.');
+  }
   if (!response.ok) throw new Error(response.status === 401 ? 'Invalid username or password.' : 'Unable to sign in. Please try again.');
   return fetchSession(); // Authentication rotates the session and CSRF token.
 }
@@ -58,10 +63,11 @@ export async function adminFetch(url: string, init: RequestInit = {}) {
     throw new Error('Your session has expired. Please sign in again.');
   }
   if (response.status === 403) {
-    // Do not replay mutations. Refresh the token for an explicit user retry.
+    const failure = await response.clone().json().catch(() => ({}));
+    // Never replay mutations. Authorization errors must not be presented as CSRF failures.
     const current = await fetchSession();
     if (!current.authenticated) window.dispatchEvent(new Event('admin-session-expired'));
-    throw new Error(current.authenticated ? 'Request could not be verified. Please try again.' : 'Your session has expired. Please sign in again.');
+    throw new Error(!current.authenticated ? 'Your session has expired. Please sign in again.' : failure.code === 'ACCESS_DENIED' ? (failure.error || 'You do not have permission to perform this operation.') : 'Request could not be verified. Please try again.');
   }
   return response;
 }

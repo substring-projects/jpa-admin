@@ -1,6 +1,8 @@
 package com.substringtechnologies.jpaadmin.metadata;
 
 import com.substringtechnologies.jpaadmin.annotations.*;
+import com.substringtechnologies.jpaadmin.config.AdminRegistry;
+import com.substringtechnologies.jpaadmin.config.JpaAdminConfigurer;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -32,16 +34,33 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class JpaMetamodelScanner {
 
+    static final Set<String> CODE_LANGUAGES = Set.of("json", "javascript", "typescript", "html", "css", "sql", "xml", "markdown", "yaml", "python", "text");
+
     private final EntityManager entityManager;
+    private final List<JpaAdminConfigurer> configurers;
     private final Map<String, EntityMetadata> entityRegistry = new ConcurrentHashMap<>();
+    private int defaultPageSize = 25;
 
     public JpaMetamodelScanner(EntityManager entityManager) {
+        this(entityManager, List.of());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public JpaMetamodelScanner(EntityManager entityManager, List<JpaAdminConfigurer> configurers) {
         this.entityManager = entityManager;
+        this.configurers = List.copyOf(configurers);
+    }
+
+    /** Rows per page for entities whose {@code @AdminResource} doesn't set {@code pageSize}. */
+    public void setDefaultPageSize(int defaultPageSize) {
+        if (defaultPageSize < 1 || defaultPageSize > 500) throw new IllegalArgumentException("spring.jpa.admin.page-size must be between 1 and 500");
+        this.defaultPageSize = defaultPageSize;
     }
 
     @PostConstruct
     public void scan() {
         Metamodel metamodel = entityManager.getMetamodel();
+        java.util.Set<String> permissionResources = new java.util.HashSet<>();
         for (EntityType<?> entityType : metamodel.getEntities()) {
             Class<?> javaType = entityType.getJavaType();
             if (javaType == null) continue;
@@ -56,6 +75,8 @@ public class JpaMetamodelScanner {
             metadata.setJavaClassName(javaType.getName());
 
             if (resourceAnn != null) {
+                if (hasText(resourceAnn.permissionResource())) metadata.setPermissionResource(resourceAnn.permissionResource());
+                if (hasText(resourceAnn.permissionResource()) && !resourceAnn.permissionResource().matches("[A-Za-z0-9_.-]+")) throw new IllegalStateException("Invalid permission resource: " + metadata.getPermissionResource());
                 metadata.setDisplayName(hasText(resourceAnn.displayName()) ? resourceAnn.displayName() : humanize(entityType.getName()));
                 metadata.setPluralName(hasText(resourceAnn.pluralName()) ? resourceAnn.pluralName() : metadata.getDisplayName() + "s");
                 metadata.setGroup(resourceAnn.group());
@@ -68,8 +89,10 @@ public class JpaMetamodelScanner {
                 metadata.setExportable(resourceAnn.exportable());
                 metadata.setDefaultSortBy(resourceAnn.defaultSortBy());
                 metadata.setDefaultSortDir(resourceAnn.defaultSortDir());
-                metadata.setPageSize(resourceAnn.pageSize());
+                if (resourceAnn.pageSize() < 0 || resourceAnn.pageSize() > 500) throw new IllegalStateException("@AdminResource pageSize on " + javaType.getSimpleName() + " must be between 1 and 500");
+                metadata.setPageSize(resourceAnn.pageSize() > 0 ? resourceAnn.pageSize() : defaultPageSize);
             } else {
+                metadata.setPageSize(defaultPageSize);
                 metadata.setDisplayName(humanize(entityType.getName()));
                 metadata.setPluralName(metadata.getDisplayName() + "s");
                 metadata.setGroup("General");
@@ -77,10 +100,7 @@ public class JpaMetamodelScanner {
                 metadata.setOrder(100);
             }
 
-            AdminPermission permAnn = javaType.getAnnotation(AdminPermission.class);
-            if (permAnn != null && permAnn.roles().length > 0) {
-                metadata.setRoles(Arrays.asList(permAnn.roles()));
-            }
+            if (!permissionResources.add(metadata.getPermissionResource())) throw new IllegalStateException("Duplicate permission resource: " + metadata.getPermissionResource());
 
             // Inspect Attributes
             for (Attribute<?, ?> attr : entityType.getAttributes()) {
@@ -108,6 +128,47 @@ public class JpaMetamodelScanner {
 
             entityRegistry.put(entityType.getName().toLowerCase(), metadata);
         }
+        validateLookups();
+        applyConfigurers();
+    }
+
+    /** Lookup properties name text fields of the related entity; a typo fails startup instead of every picker. */
+    private void validateLookups() {
+        for (EntityMetadata entity : entityRegistry.values()) {
+            for (FieldMetadata field : entity.getFields()) {
+                if (field.getLookupTargetEntity() == null) continue;
+                EntityMetadata target = getMetadata(field.getLookupTargetEntity());
+                String where = "@AdminLookup on " + entity.getEntityName() + "." + field.getName();
+                for (String property : new String[]{field.getLookupProperty(), field.getSearchProperty()}) {
+                    if (!hasText(property)) continue;
+                    if (target == null) throw new IllegalStateException(where + " targets " + field.getLookupTargetEntity() + ", which isn't shown in JPA Admin");
+                    FieldMetadata candidate = target.getField(property);
+                    if (candidate == null || candidate.isSensitive() || candidate.isComputed())
+                        throw new IllegalStateException(where + " names '" + property + "', which isn't a visible field of " + target.getEntityName());
+                }
+                if (hasText(field.getSearchProperty()) && target.getField(field.getSearchProperty()).getFieldType() != FieldType.STRING)
+                    throw new IllegalStateException(where + " searchProperty '" + field.getSearchProperty() + "' must be a text field");
+            }
+        }
+    }
+
+    private void applyConfigurers() {
+        if (configurers.isEmpty()) return;
+        AdminRegistry registry = new AdminRegistry();
+        configurers.forEach(configurer -> configurer.configure(registry));
+        registry.getCustomizers().forEach((type, customizer) -> {
+            EntityMetadata metadata = entityRegistry.values().stream()
+                    .filter(entity -> entity.getJavaClassName().equals(type.getName())).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("JpaAdminConfigurer customizes " + type.getName() + ", which isn't a JPA entity shown in JPA Admin"));
+            if (hasText(customizer.getDisplayName())) {
+                metadata.setDisplayName(customizer.getDisplayName());
+                metadata.setPluralName(customizer.getDisplayName() + "s");
+            }
+            if (hasText(customizer.getPluralName())) metadata.setPluralName(customizer.getPluralName());
+            if (hasText(customizer.getIcon())) metadata.setIcon(customizer.getIcon());
+            if (hasText(customizer.getGroup())) metadata.setGroup(customizer.getGroup());
+            if (customizer.getOrder() != null) metadata.setOrder(customizer.getOrder());
+        });
     }
 
     private FieldMetadata inspectField(Attribute<?, ?> attr, Field field, Class<?> entityClass) {
@@ -183,6 +244,10 @@ public class JpaMetamodelScanner {
         if (sensitive != null || attr.getName().toLowerCase().contains("password") || attr.getName().toLowerCase().contains("secret")) {
             meta.setSensitive(true);
             meta.setInList(false); // sensitive hidden from list by default
+            meta.setSortable(false);
+            meta.setFilterable(false);
+            meta.setSearchable(false);
+            if (sensitive != null) meta.setMaskPattern(sensitive.mask() && !sensitive.maskPattern().isEmpty() ? sensitive.maskPattern() : null);
             if (meta.getWidget() == WidgetType.AUTO) {
                 meta.setWidget(WidgetType.PASSWORD);
             }
@@ -205,6 +270,7 @@ public class JpaMetamodelScanner {
 
         // Validation constraints
         inspectValidation(field, meta);
+        applyWidgetOptions(field, meta);
 
         // Badge Mapping
         AdminBadge badgeAnn = (field != null) ? field.getAnnotation(AdminBadge.class) : null;
@@ -230,7 +296,6 @@ public class JpaMetamodelScanner {
             if (lookup != null) {
                 meta.setLookupProperty(lookup.lookupProperty());
                 meta.setSearchProperty(lookup.searchProperty());
-                meta.setQuickCreate(lookup.quickCreate());
             }
             return;
         }
@@ -246,7 +311,10 @@ public class JpaMetamodelScanner {
             meta.setInForm(owning && field.getAnnotation(AdminInline.class) == null);
             if (!owning) meta.setReadOnly(true);
             AdminLookup lookup = field.getAnnotation(AdminLookup.class);
-            if (lookup != null) meta.setLookupProperty(lookup.lookupProperty());
+            if (lookup != null) {
+                meta.setLookupProperty(lookup.lookupProperty());
+                meta.setSearchProperty(lookup.searchProperty());
+            }
             return;
         }
 
@@ -289,6 +357,33 @@ public class JpaMetamodelScanner {
             meta.setFilterable(true);
         } else {
             meta.setFieldType(FieldType.STRING);
+        }
+    }
+
+    void applyWidgetOptions(Field field, FieldMetadata meta) {
+        AdminWidget widget = field == null ? null : field.getAnnotation(AdminWidget.class);
+        if (widget == null) return;
+        String where = "@AdminWidget on " + field.getDeclaringClass().getSimpleName() + "." + field.getName();
+        boolean hasMin = Double.isFinite(widget.min()), hasMax = Double.isFinite(widget.max());
+        if (hasMin || hasMax || widget.step() != 0 || widget.type() == WidgetType.SLIDER) {
+            if (meta.getFieldType() != FieldType.NUMBER) throw new IllegalStateException(where + ": min, max, step and SLIDER require a numeric field");
+            if (hasMin && hasMax && widget.min() > widget.max()) throw new IllegalStateException(where + ": min must not exceed max");
+            if (!(widget.step() >= 0) || Double.isInfinite(widget.step())) throw new IllegalStateException(where + ": step must be 0 or a positive number");
+            if (widget.type() == WidgetType.SLIDER && !(hasMin && hasMax)) throw new IllegalStateException(where + ": SLIDER needs both min and max");
+            if (hasMin) meta.setMin(widget.min());
+            if (hasMax) meta.setMax(widget.max());
+            if (widget.step() > 0) meta.setStep(widget.step());
+        }
+        if (meta.getWidget() == WidgetType.CODE_EDITOR) {
+            String language = widget.language().trim().toLowerCase(Locale.ROOT);
+            if (!CODE_LANGUAGES.contains(language))
+                throw new IllegalStateException(where + ": unsupported language '" + widget.language() + "'. Use one of " + new TreeSet<>(CODE_LANGUAGES));
+            meta.setLanguage(language);
+        }
+        if (hasText(widget.previewSize())) {
+            String size = widget.previewSize().trim();
+            if (!size.matches("\\d{1,3}(\\.\\d+)?(px|rem|em)")) throw new IllegalStateException(where + ": previewSize must be a CSS length such as 64px or 4rem");
+            meta.setPreviewSize(size);
         }
     }
 

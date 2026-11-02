@@ -1,6 +1,0 @@
-jdk:
-  - openjdk17
-
-install:
-  - chmod +x ./mvnw
-  - ./mvnw -B -ntp clean install -pl jpa-admin-spring-boot-starter -am -DskipNpmBuild=true -DskipTests

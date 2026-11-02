@@ -2,7 +2,10 @@ package com.substringtechnologies.jpaadmin.boot.config;
 
 import com.substringtechnologies.jpaadmin.storage.LocalFileStorage;
 import com.substringtechnologies.jpaadmin.storage.StorageRegistry;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.ServletContextAware;
+import org.springframework.web.util.HtmlUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -16,17 +19,24 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer {
+public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer, ServletContextAware {
 
     private static final String BUILT_BASE = "<base href=\"/admin/\"";
 
     private final JpaAdminProperties properties;
     private final StorageRegistry storages;
     private volatile Resource indexPage;
+    private String contextPath = "";
 
     public JpaAdminWebMvcConfigurer(JpaAdminProperties properties, StorageRegistry storages) {
         this.properties = properties;
         this.storages = storages;
+    }
+
+    @Override
+    public void setServletContext(ServletContext servletContext) {
+        contextPath = servletContext.getContextPath();
+        indexPage = null;
     }
 
     /** Uploaded files are served as inert content: no type sniffing, and any HTML or SVG runs in a sandbox. */
@@ -85,7 +95,7 @@ public class JpaAdminWebMvcConfigurer implements WebMvcConfigurer {
             return null;
         }
         String html = new String(source.getContentAsByteArray(), StandardCharsets.UTF_8)
-                .replace(BUILT_BASE, "<base href=\"" + properties.getPath() + "/\"");
+                .replace(BUILT_BASE, "<base href=\"" + HtmlUtils.htmlEscape(contextPath + properties.getPath() + "/") + "\"");
         long lastModified = System.currentTimeMillis();
         cached = new ByteArrayResource(html.getBytes(StandardCharsets.UTF_8), "JPA Admin index page") {
             @Override

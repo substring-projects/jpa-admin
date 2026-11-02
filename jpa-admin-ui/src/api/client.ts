@@ -104,8 +104,12 @@ export async function batchDeleteRecords(entity: string, ids: any[]): Promise<nu
   return data.deleted || 0;
 }
 
-export async function lookupRecords(entity: string, q = ''): Promise<Array<{ id: any; label: string }>> {
-  const res = await adminFetch(`${BASE_URL}/${encodeURIComponent(entity)}/lookup?q=${encodeURIComponent(q)}&limit=25`);
+/** Picker options; `options` come from the source field's @AdminLookup. */
+export async function lookupRecords(entity: string, q = '', options: { searchProperty?: string; labelProperty?: string } = {}): Promise<Array<{ id: any; label: string }>> {
+  const params = new URLSearchParams({ q, limit: '25' });
+  if (options.searchProperty) params.set('searchProperty', options.searchProperty);
+  if (options.labelProperty) params.set('labelProperty', options.labelProperty);
+  const res = await adminFetch(`${BASE_URL}/${encodeURIComponent(entity)}/lookup?${params}`);
   if (!res.ok) throw new Error(`Failed to load ${encodeURIComponent(entity)} options`);
   return res.json();
 }

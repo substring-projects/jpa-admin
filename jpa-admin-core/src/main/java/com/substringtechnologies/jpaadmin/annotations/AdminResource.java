@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface AdminResource {
+    /** Stable namespaced permission identifier. Defaults to the entity's fully qualified Java class name. */
+    String permissionResource() default "";
     String displayName() default "";
     String pluralName() default "";
     String group() default "General";
@@ -20,6 +22,7 @@ public @interface AdminResource {
     boolean exportable() default true;
     String defaultSortBy() default "id";
     SortDir defaultSortDir() default SortDir.DESC;
-    int pageSize() default 25;
+    /** Initial rows per page; {@code 0} uses {@code spring.jpa.admin.page-size}. */
+    int pageSize() default 0;
     boolean hidden() default false;
 }

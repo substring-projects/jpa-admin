@@ -36,7 +36,7 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     @NotNull
     @AdminField(label = "Customer", order = 3, filterable = true)
-    @AdminLookup(lookupProperty = "fullName", searchProperty = "fullName", quickCreate = true)
+    @AdminLookup(lookupProperty = "fullName", searchProperty = "fullName")
     private Customer customer;
 
     @Enumerated(EnumType.STRING)

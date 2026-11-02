@@ -73,7 +73,17 @@ export interface FieldMetadata {
   primaryKey: boolean;
   generatedValue: boolean;
   sensitive: boolean;
+  /** Text the server sends for a set sensitive value; null when it doesn't reveal whether one is set. */
+  maskPattern?: string | null;
   widget: WidgetType;
+  /** @AdminWidget bounds and increment for numbers. */
+  min?: number | null;
+  max?: number | null;
+  step?: number | null;
+  /** CODE_EDITOR syntax. */
+  language?: string | null;
+  /** CSS length for image thumbnails in lists. */
+  previewSize?: string | null;
   validation: ValidationMetadata;
   enumValues: string[];
   badges: BadgeMetadata[];
@@ -81,7 +91,6 @@ export interface FieldMetadata {
   lookupTargetEntity?: string;
   lookupProperty?: string;
   searchProperty?: string;
-  quickCreate?: boolean;
 
   computed?: boolean;
   format?: string;
@@ -120,6 +129,8 @@ export interface ActionMetadata {
 }
 
 export interface EntityMetadata {
+  permissionResource?: string;
+  permissions?: Record<string, boolean>;
   entityName: string;
   javaClassName: string;
   displayName: string;
@@ -140,7 +151,6 @@ export interface EntityMetadata {
   fields: FieldMetadata[];
   inlines: InlineMetadata[];
   actions: ActionMetadata[];
-  roles: string[];
 }
 
 export interface PageResult<T> {

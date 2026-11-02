@@ -14,12 +14,15 @@ interface Props {
   value: Ref[];
   invalid?: boolean;
   disabled?: boolean;
+  /** From @AdminLookup: the related field searched and the one shown as each option's label. */
+  searchProperty?: string;
+  labelProperty?: string;
   onChange: (value: Ref[]) => void;
 }
 
 const display = (ref: Ref) => { const text = ref.label ?? String(ref.id); return isUuid(text) ? shortId(text) : text; };
 
-export function RelationMultiSelect({ id, label, entity, value, invalid, disabled, onChange }: Props) {
+export function RelationMultiSelect({ id, label, entity, value, invalid, disabled, onChange, searchProperty, labelProperty }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<Ref[]>([]);
@@ -32,13 +35,13 @@ export function RelationMultiSelect({ id, label, entity, value, invalid, disable
     let active = true;
     setLoading(true);
     const timer = window.setTimeout(() => {
-      lookupRecords(entity, query)
+      lookupRecords(entity, query, { searchProperty, labelProperty })
         .then(results => { if (active) { setOptions(results); setError(''); } })
         .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Lookup failed'); })
         .finally(() => { if (active) setLoading(false); });
     }, 200);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [entity, query, open]);
+  }, [entity, query, open, searchProperty, labelProperty]);
 
   const toggle = (option: Ref) => onChange(selected.has(String(option.id))
     ? value.filter(v => String(v.id) !== String(option.id))

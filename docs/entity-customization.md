@@ -23,12 +23,29 @@ import com.substringtechnologies.jpaadmin.annotations.*;
     order = 10,                     // position inside the group (lower first)
     defaultSortBy = "createdAt",
     defaultSortDir = SortDir.DESC,
-    pageSize = 25
+    pageSize = 25                   // omit to use spring.jpa.admin.page-size
 )
 public class Product { … }
 ```
 
 Entities without `@AdminResource` still appear, in the **General** group, named after the class, with an icon guessed from the name.
+
+### Customizing in code
+
+For entities you can't annotate, such as ones from a shared library, register a `JpaAdminConfigurer` bean. Its values override `@AdminResource`:
+
+```java
+@Bean
+JpaAdminConfigurer catalogAdmin() {
+    return registry -> registry.forEntity(Category.class)
+            .displayName("Collection")   // plural becomes "Collections" unless pluralName(...) is set
+            .icon("folder-tree")
+            .group("Catalog")
+            .order(1);
+}
+```
+
+Every configurer bean is applied once at startup. Naming a class that isn't a JPA entity shown in the console fails startup.
 
 ## Control what users can do
 
@@ -94,13 +111,19 @@ private String description;
 @AdminWidget(type = WidgetType.RICH_TEXT)     // formatted text, stored as HTML
 private String marketingCopy;
 
-@AdminWidget(type = WidgetType.CODE_EDITOR)   // JSON, SQL, templates…
-private String specifications;
+@AdminWidget(type = WidgetType.CODE_EDITOR, language = "sql")   // json (default), javascript, typescript, html, css, sql, xml, markdown, yaml, python, text
+private String reportQuery;
+
+@AdminWidget(type = WidgetType.SLIDER, min = 0, max = 90, step = 5)   // needs min and max
+private Integer discountPercent;
+
+@AdminWidget(min = 0, step = 1)               // number input with bounds the API enforces too
+private Integer stockQuantity;
 
 @AdminWidget(type = WidgetType.COLOR_PICKER)  // "#16a34a"
 private String color;
 
-@AdminWidget(type = WidgetType.IMAGE_URL)     // a link to an image, shown as a picture
+@AdminWidget(type = WidgetType.IMAGE_URL, previewSize = "64px")   // a link to an image; thumbnail size in tables
 private String externalImage;
 ```
 
@@ -113,11 +136,11 @@ Rich text is sanitized before it's displayed, so stored HTML can't run scripts i
 ```java
 @ManyToOne(fetch = FetchType.LAZY)
 @AdminField(label = "Category", filterable = true)
-@AdminLookup(lookupProperty = "name")   // which property labels the related record
+@AdminLookup(lookupProperty = "name", searchProperty = "code")   // label by name, search by code
 private Category category;
 ```
 
-Edited with a searchable picker. The label comes from `lookupProperty`, then from a conventional name field (`name`, `title`, `label`, `fullName`, `displayName`, `username`, `code`), then from `toString()`, then the ID. Tables link to the related record, and `filterable = true` adds a relation filter.
+Edited with a searchable picker that searches `searchProperty` (or a name-like field) and the ID. The label comes from `lookupProperty`, then from a conventional name field (`name`, `title`, `label`, `fullName`, `displayName`, `username`, `code`), then from `toString()`, then the ID. Tables link to the related record, and `filterable = true` adds a relation filter.
 
 ### Many-to-many
 
@@ -141,6 +164,8 @@ The owning side is edited with a multi-select. The inverse side (`mappedBy`) is 
 private List<OrderItem> items = new ArrayList<>();
 ```
 
+Use `type = InlineType.STACKED` to show each row as a panel with full-size inputs instead of a table row; it suits rows with many or wide fields such as rich text.
+
 Rows are edited inside the parent's form and saved in the same transaction. The back-reference (`order`) is filled in automatically. Each row is validated, and its errors appear in the matching cell. The record page shows the rows in their own tab.
 
 !!! warning "Inline collections need `mappedBy`"
@@ -161,11 +186,17 @@ Covered in depth in [File & image uploads](file-uploads.md).
 ## Sensitive fields
 
 ```java
-@AdminSensitive
+@AdminSensitive                         // shows ••••••••  when set
+private String password;
+
+@AdminSensitive(mask = false)           // doesn't even reveal whether a value is set
 private String apiKey;
+
+@AdminSensitive(maskPattern = "[configured]")
+private String webhookSecret;
 ```
 
-Sensitive values are masked in API responses, hidden from tables, and edited with a masked input; leaving it blank keeps the current value. This is a display safeguard. It doesn't encrypt or hash the stored value.
+Sensitive values never leave the server: responses carry only the mask, and the fields can't be searched, filtered, sorted or exported. They're edited with a masked input; leaving it blank, or sending the mask back, keeps the current value. This doesn't encrypt or hash the stored value.
 
 ## Computed values
 
@@ -174,6 +205,12 @@ Sensitive values are masked in API responses, hidden from tables, and edited wit
 @AdminComputed(label = "In stock?", order = 9)
 public boolean isInStock() {
     return stockQuantity != null && stockQuantity > 0;
+}
+
+@Transient
+@AdminComputed(label = "Inventory value", format = "$%,.2f")   // java.util.Formatter pattern
+public BigDecimal getInventoryValue() {
+    return price.multiply(BigDecimal.valueOf(stockQuantity));
 }
 ```
 
@@ -184,13 +221,17 @@ Shown in tables and on record pages, never editable or persisted. Use a standard
 ```java
 @AdminAction(
     name = "Publish product",
+    icon = "circle-check",            // any Lucide icon name
     confirmation = "Publish the selected products?",
     scope = ActionScope.BOTH          // SINGLE_ROW, BULK_SELECTION or BOTH
 )
 public void publish() {
+    if (status == ProductStatus.ARCHIVED) throw new IllegalStateException("Archived products can't be published");
     this.status = ProductStatus.PUBLISHED;
 }
 ```
+
+- Throw `IllegalStateException` or `IllegalArgumentException` to refuse: the message is shown to the admin and the transaction is rolled back. Any other exception is logged and shown as a generic error.
 
 - A no-argument **instance method** runs once per selected record, inside a transaction, and the changes are saved. The console then shows "Publish product completed".
 - A **static method taking a `List`** receives all selected records at once. If it returns a `String`, that text is shown as the success message.

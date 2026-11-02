@@ -10,7 +10,7 @@ import { useEntity } from '@/context/AdminContext';
 import { useAuth } from '@/context/AuthContext';
 import { CellValue } from '@/components/CellValue';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { EntityIcon } from '@/components/DynamicIcon';
+import { EntityIcon, DynamicIcon } from '@/components/DynamicIcon';
 import { ErrorState, NotFound, PageHeader } from '@/components/PageStates';
 import { useEntityMutations } from '@/hooks/use-entity-mutations';
 import { useHotkeys } from '@/hooks/use-hotkeys';
@@ -339,7 +339,7 @@ function EntityList({ entity }: { entity: EntityMetadata }) {
                     {canCreate && <DropdownMenuItem onSelect={() => navigate(`/${entity.entityName}/new?copy=${encodeURIComponent(key)}`)}><Copy />Duplicate</DropdownMenuItem>}
                     <DropdownMenuItem onSelect={() => { void navigator.clipboard?.writeText(key); toast.success('ID copied'); }}><ChevronsLeftRight />Copy ID</DropdownMenuItem>
                     {rowActions.length > 0 && <DropdownMenuSeparator />}
-                    {rowActions.map(action => <DropdownMenuItem key={action.id} onSelect={() => requestAction(action, [id])}><Zap />{action.name}</DropdownMenuItem>)}
+                    {rowActions.map(action => <DropdownMenuItem key={action.id} onSelect={() => requestAction(action, [id])}><DynamicIcon name={action.icon || 'zap'} fallback={Zap} />{action.name}</DropdownMenuItem>)}
                     {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => requestDelete([id])}><Trash2 />Delete</DropdownMenuItem></>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -390,7 +390,7 @@ function EntityList({ entity }: { entity: EntityMetadata }) {
       className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-fit flex-wrap items-center gap-2 rounded-xl border bg-popover p-2 pl-4 text-popover-foreground shadow-lg animate-in fade-in slide-in-from-bottom-2">
       <span className="tabular text-sm font-medium">{selected.size} selected</span>
       <span className="mx-1 h-5 w-px bg-border" />
-      {bulkActions.map(action => <Button key={action.id} variant="ghost" size="sm" onClick={() => requestAction(action, selectedRaw)}><Zap />{action.name}</Button>)}
+      {bulkActions.map(action => <Button key={action.id} variant="ghost" size="sm" onClick={() => requestAction(action, selectedRaw)}><DynamicIcon name={action.icon || 'zap'} fallback={Zap} />{action.name}</Button>)}
       {canDelete && <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => requestDelete(selectedRaw)}><Trash2 />Delete</Button>}
       <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X /></Button>
     </div>}

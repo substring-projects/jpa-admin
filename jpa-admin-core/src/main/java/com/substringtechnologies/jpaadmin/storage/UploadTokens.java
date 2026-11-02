@@ -32,13 +32,13 @@ public class UploadTokens {
         }
     }
 
-    public record Claims(String storage, String key, String contentType, long size, long maxSize, String entity, String field, long expires) {}
+    public record Claims(String storage, String key, String contentType, long size, long maxSize, String entity, String field, long expires, String subject, String operation) {}
 
     public String sign(Claims claims) {
         try {
             String body = Base64.getUrlEncoder().withoutPadding().encodeToString(json.writeValueAsBytes(Map.of(
                     "s", claims.storage(), "k", claims.key(), "t", claims.contentType(), "n", claims.size(), "m", claims.maxSize(),
-                    "e", claims.entity(), "f", claims.field(), "x", claims.expires())));
+                    "e", claims.entity(), "f", claims.field(), "x", claims.expires(), "u", claims.subject(), "o", claims.operation())));
             return body + "." + mac(body);
         } catch (Exception e) {
             throw new IllegalStateException("Could not sign upload ticket", e);
@@ -59,7 +59,7 @@ public class UploadTokens {
             throw new UploadException(400, "Invalid upload ticket");
         }
         Claims claims = new Claims((String) map.get("s"), (String) map.get("k"), (String) map.get("t"), ((Number) map.get("n")).longValue(),
-                ((Number) map.get("m")).longValue(), (String) map.get("e"), (String) map.get("f"), ((Number) map.get("x")).longValue());
+                ((Number) map.get("m")).longValue(), (String) map.get("e"), (String) map.get("f"), ((Number) map.get("x")).longValue(), (String) map.get("u"), (String) map.get("o"));
         if (Instant.now().getEpochSecond() > claims.expires()) throw new UploadException(410, "The upload took too long. Please try again.");
         return claims;
     }

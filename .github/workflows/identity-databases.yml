@@ -1,0 +1,57 @@
+name: Identity databases
+on:
+  push:
+    paths: ['jpa-admin-identity/**', 'jpa-admin-core/**', 'pom.xml', '.github/workflows/identity-databases.yml']
+  pull_request:
+    paths: ['jpa-admin-identity/**', 'jpa-admin-core/**', 'pom.xml', '.github/workflows/identity-databases.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - database: PostgreSQL 18
+            image: postgres:18
+            url: jdbc:postgresql://localhost:5432/identity_test
+            health: pg_isready -U identity_test -d identity_test
+          - database: MySQL 8.4
+            image: mysql:8.4
+            url: jdbc:mysql://localhost:3306/identity_test?allowPublicKeyRetrieval=true&useSSL=false
+            health: mysqladmin ping -h 127.0.0.1
+    name: H2 and ${{ matrix.database }}
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_DB: identity_test
+          POSTGRES_USER: identity_test
+          POSTGRES_PASSWORD: identity_test
+          MYSQL_DATABASE: identity_test
+          MYSQL_USER: identity_test
+          MYSQL_PASSWORD: identity_test
+          MYSQL_ROOT_PASSWORD: identity_test_root
+        ports:
+          - 5432:5432
+          - 3306:3306
+        options: >-
+          --health-cmd="${{ matrix.health }}"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: H2 identity contract
+        run: mvn -B test -pl jpa-admin-identity -am -Dtest=IdentityDatabaseTest -Dsurefire.failIfNoSpecifiedTests=false
+      - name: Server database identity contract
+        env:
+          IDENTITY_TEST_URL: ${{ matrix.url }}
+          IDENTITY_TEST_USER: identity_test
+          IDENTITY_TEST_PASSWORD: identity_test
+        run: mvn -B test -pl jpa-admin-identity -am -Dtest=IdentityDatabaseTest -Dsurefire.failIfNoSpecifiedTests=false
