@@ -11,6 +11,9 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -26,15 +29,26 @@ public class JpaAdminSecurityConfiguration {
         var encoder = new BCryptPasswordEncoder();
         var users = new InMemoryUserDetailsManager(User.withUsername(config.getUsername())
                 .password(encoder.encode(config.getPassword())).roles("JPA_ADMIN").build());
-        String api = properties.getPath() + "/api";
+        String path = properties.getPath();
+        String api = path + "/api";
+        // Keep host authentication and CSRF state intact, even in a shared servlet session.
+        var contexts = new HttpSessionSecurityContextRepository();
+        contexts.setSpringSecurityContextKey("JPA_ADMIN_SECURITY_CONTEXT:" + path);
+        var csrf = new HttpSessionCsrfTokenRepository();
+        csrf.setSessionAttributeName("JPA_ADMIN_CSRF_TOKEN:" + path);
         var provider = new DaoAuthenticationProvider(users);
         provider.setPasswordEncoder(encoder);
         // A local authentication manager keeps host application's users and providers separate.
-        http.securityMatcher(api + "/**")
+        http.securityMatcher(path, path + "/**")
+                .securityContext(context -> context.securityContextRepository(contexts))
+                .csrf(configurer -> configurer.csrfTokenRepository(csrf))
                 .authenticationManager(new ProviderManager(provider))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(api + "/auth/session", api + "/auth/login").permitAll()
-                        .anyRequest().hasRole("JPA_ADMIN"))
+                        .requestMatchers(api, api + "/**").hasRole("JPA_ADMIN")
+                        .requestMatchers(HttpMethod.GET, path, path + "/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, path, path + "/**").permitAll()
+                        .anyRequest().denyAll())
                 .requestCache(cache -> cache.disable())
                 .formLogin(form -> form.loginProcessingUrl(api + "/auth/login")
                         .successHandler((request, response, authentication) -> response.setStatus(204))
@@ -44,7 +58,7 @@ public class JpaAdminSecurityConfiguration {
                             response.getWriter().write("{\"error\":\"Invalid username or password\"}");
                         }))
                 .logout(logout -> logout.logoutUrl(api + "/auth/logout")
-                        .invalidateHttpSession(true).clearAuthentication(true)
+                        .invalidateHttpSession(false).clearAuthentication(true)
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
                     response.setStatus(401);

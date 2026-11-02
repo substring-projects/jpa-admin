@@ -36,7 +36,7 @@ class JpaAdminSecurityTest {
                 .andExpect(jsonPath("$.csrfToken").isNotEmpty())
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
-    @Test void loginUsesConfiguredCredentialsAndLogoutInvalidatesSession() throws Exception {
+    @Test void loginUsesConfiguredCredentialsAndLogoutClearsAdminContext() throws Exception {
         mvc.perform(post("/admin/api/auth/login").with(csrf()).param("username", "admin").param("password", "admin"))
                 .andExpect(status().isUnauthorized());
         var result = mvc.perform(post("/admin/api/auth/login").with(csrf()).param("username", "configured-admin").param("password", "test-password"))
@@ -46,7 +46,8 @@ class JpaAdminSecurityTest {
         mvc.perform(get("/admin/api/metadata").session(session)).andExpect(status().isOk());
         mvc.perform(get("/admin/api/auth/session").session(session)).andExpect(jsonPath("$.username").value("configured-admin"));
         mvc.perform(post("/admin/api/auth/logout").session(session).with(csrf())).andExpect(status().isNoContent());
-        assertTrue(session.isInvalid());
+        assertFalse(session.isInvalid());
+        mvc.perform(get("/admin/api/metadata").session(session)).andExpect(status().isUnauthorized());
         mvc.perform(get("/admin/api/metadata")).andExpect(status().isUnauthorized());
     }
     @Test void csrfRequiredForLoginAndAuthenticatedWrites() throws Exception {

@@ -103,3 +103,7 @@ The [requirements document](PROJECT_REQUIREMENTS.md) records product plans; it i
 ## Creator
 
 Created and maintained by **[Durgesh Tiwari](https://github.com/durgeshcoder)** ([@durgeshcoder](https://github.com/durgeshcoder)).
+
+### Using your own Spring Security or JWT authentication
+
+The admin owns its configured path (default `/admin/**`) with a security chain at order `-100`, including its UI assets. Your APIs keep their own security chains and authentication. Admin authentication and CSRF state are isolated from the host login; admin logout preserves the host session. Reserve the admin prefix, order host chains after it or exclude it, and keep custom JWT filters out of global servlet registration. See [security integration](docs/security.md#coexisting-with-host-spring-security) for examples and shared-session limits.
